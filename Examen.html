@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+  <!-- Materialize -->
+  <link rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <!-- Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- CSS GLOBAL -->
+  <?!= HtmlService.createHtmlOutputFromFile('Styles').getContent(); ?>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+body{
+  background:#1a237e;
+  color:white;
+}
+.pregunta-excluyente {
+  border-left: 5px solid #c62828;
+  padding-left: 10px;
+}
+</style>
+</head>
+
+<body>
+  <div class="container">
+    <div id="pantallaDni" class="exam-card center-align" style="margin-top:10vh;">
+      <h4 class="blue-text text-darken-4 bold">Examen Teórico</h4>
+      <p>Ingrese su DNI para validar su habilitación.</p>
+      <div class="input-field">
+        <i class="material-icons prefix">fingerprint</i>
+        <input type="number" id="dniInput" style="font-size: 1.5rem; text-align:center;">
+      </div>
+      <button onclick="verificarAlumno()" id="btnValidar" class="btn-large blue darken-4" style="width:100%; border-radius:15px;">Validar Datos</button>
+    </div>
+
+
+    <div id="pantallaPreguntas" class="exam-card" style="display:none;">
+      <div class="row" style="margin-bottom:0;">
+        <div class="col s6 bold" id="txtProgreso">Pregunta 1/10</div>
+        <div class="col s6 right-align bold" id="txtReloj">00:00</div>
+      </div>
+    
+      <div class="timer-bar">
+        <div id="timerFill" class="timer-fill"></div>
+      </div>
+
+      <h5 id="txtPregunta" class="bold">Cargando...</h5>
+      
+      <div id="alertaExcluyente" style="display:none; margin-bottom:10px;"></div>
+
+      <div id="opcionesBox"></div>
+    </div>
+
+    <div id="pantallaResultados" class="exam-card center-align" style="display:none;">
+      <div id="resultadoVisual"></div>
+      <h4>Calificación: <span id="notaFinal">0</span>%</h4>
+      <div id="feedbackPanel" style="margin:20px 0;"></div>
+      <button id="btnVerFallos" class="btn orange darken-3" style="display:none;" onclick="mostrarRevision()">Ver Errores</button>
+      <br><br>
+      <a href="<?= inst.url ?>" target="_top" class="btn-large blue darken-4">Finalizar y Salir</a>
+      <div id="listaFallos" style="display:none; margin-top:20px; text-align:left;">
+        <table class="striped">
+          <tbody id="tablaFallos"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let preguntas = [], indice = 0, respuestas = [], timer, tiempoRestante, dniActual;
+    let respuestasParaServidor = {};
+    let tiempoInicioPregunta = 0;
+
+    window.onbeforeunload = () => "Si sales ahora, perderás el progreso.";
+
+    function verificarAlumno() {
+      const dniInput = document.getElementById('dniInput').value;
+      if (!dniInput) {
+        Swal.fire('Atención', 'Por favor, ingrese su DNI', 'warning');
+        return;
+      }
+
+      dniActual = dniInput;
+      const btn = document.getElementById('btnValidar');
+      btn.disabled = true;
+
+      google.script.run.withSuccessHandler(res => {
+        btn.disabled = false;
+        if (!res.success) {
+          Swal.fire('No encontrado', res.message, 'error');
+          return;
+        }
+
+        const alu = res.data;
+        const estado = alu.estadoExamen ? alu.estadoExamen.toString().toUpperCase().trim() : "";
+        const asistencia = parseFloat(alu.asistencia) || 0;
+        const notaPrevia = alu.notaRegistrada;
+
+        // --- NUEVA LÓGICA DE ACCESO ---
+
+        // 1. Si el estado es HABILITADO, entra directo (aunque tenga nota vieja)
+        if (asistencia >= 100 && estado === "HABILITADO") {
+          document.getElementById('pantallaDni').style.display = 'none';
+          document.getElementById('pantallaPreguntas').style.display = 'block';
+          iniciarCargaPreguntas();
+        } 
+        // 2. Si NO dice HABILITADO pero ya tiene una nota, bloqueamos porque ya rindió ese turno
+        else if (notaPrevia !== "" && notaPrevia !== null && !isNaN(notaPrevia)) {
+          Swal.fire({
+            title: 'Examen ya realizado',
+            text: `Tu última calificación registrada es: ${notaPrevia}%. Si debes rendir nuevamente, solicita habilitación.`,
+            icon: 'info',
+            confirmButtonColor: '#1a237e'
+          });
+        } 
+        // 3. Casos de error (No habilitado o falta asistencia)
+        else {
+          let mensaje = "";
+          if (asistencia < 100) {
+            mensaje = "No posees el 100% de asistencia (clases 1 y 2).";
+          } else {
+            mensaje = "Tu usuario todavía no ha sido habilitado para rendir hoy. Por favor, avisa al instructor.";
+          }
+
+          Swal.fire({
+            title: 'Acceso Denegado',
+            text: mensaje,
+            icon: 'warning',
+            confirmButtonColor: '#1a237e'
+          });
+        }
+      }).withFailureHandler(err => {
+        btn.disabled = false;
+        Swal.fire('Error de Conexión', 'No se pudo contactar con el servidor.', 'error');
+      }).obtenerDatosMesa(dniActual);
+    }
+
+function iniciarCargaPreguntas() {
+  google.script.run
+    .withSuccessHandler(data => {
+      console.log("👉 DATA CRUDA DESDE BACKEND:", data); // 🔴 DEBUG 1
+
+      if (!Array.isArray(data)) {
+        console.error("❌ No es array:", data);
+        Swal.fire('Error', 'Formato inválido de preguntas', 'error');
+        return;
+      }
+
+      if (data.length === 0) {
+        console.warn("⚠️ Array vacío");
+        Swal.fire('Error', 'No hay preguntas cargadas', 'error');
+        return;
+      }
+
+      preguntas = data;
+      console.log("✅ Preguntas cargadas:", preguntas); // 🔴 DEBUG 2 (ACÁ ESTÁ TU console.log)
+      mostrarPregunta();
+    })
+    .withFailureHandler(err => {
+      console.error("💥 ERROR BACKEND:", err);
+
+      Swal.fire({
+        title: 'Error cargando preguntas',
+        text: err.message || err,
+        icon: 'error'
+      });
+    })
+    .obtenerTodasLasPreguntas();
+}
+
+function mostrarPregunta() {
+  if (indice >= preguntas.length) return finalizar();
+
+  const p = preguntas[indice];
+
+  // ⏱️ inicio tiempo
+  tiempoInicioPregunta = Date.now();
+
+  // 📊 progreso
+  document.getElementById('txtProgreso').innerText =
+    "Pregunta " + (indice + 1) + "/" + preguntas.length;
+
+  // 📌 texto pregunta
+  const txtPregunta = document.getElementById('txtPregunta');
+
+  txtPregunta.innerHTML = p.texto;
+
+  // 🎨 estilo visual
+  if (p.excluyente) {
+    txtPregunta.classList.add('pregunta-excluyente');
+  } else {
+    txtPregunta.classList.remove('pregunta-excluyente');
+  }
+
+  // 🔴 ALERTA EXCLUYENTE
+  const alerta = document.getElementById('alertaExcluyente');
+
+  if (p.excluyente === true) {
+    alerta.style.display = 'block';
+    alerta.innerHTML = `
+      <div style="
+        background:#ffebee;
+        color:#c62828;
+        padding:10px;
+        border-radius:8px;
+        font-size:0.9em;
+        text-align:center;
+      ">
+        ⚠ <b>Pregunta Excluyente</b><br>
+        Si responde incorrectamente, el examen es desaprobado.
+      </div>
+    `;
+  } else {
+    alerta.style.display = 'none';
+    alerta.innerHTML = '';
+  }
+
+  // 📦 opciones
+  const box = document.getElementById('opcionesBox');
+  box.innerHTML = "";
+
+  const renderOptionHTML = (opt, content) => {
+    return `<b>${opt.toUpperCase()})</b> ${content || ''}`;
+  };
+
+  if (!p.opciones) {
+    box.innerHTML =
+      '<p class="red-text">No se encontraron opciones para esta pregunta.</p>';
+  } else {
+
+    ['a','b','c'].forEach(opt => {
+
+      const optText = p.opciones?.[opt];
+      if (!optText) return;
+
+      const btn = document.createElement('button');
+
+      btn.className = "option-btn";
+
+      btn.innerHTML = renderOptionHTML(opt, optText);
+
+      btn.onclick = () => procesarRespuesta(opt);
+
+      box.appendChild(btn);
+
+    });
+
+  }
+
+  // ⏱️ reloj por pregunta
+  iniciarReloj(p.tiempo || 30);
+}
+
+function procesarRespuesta(opt) {
+  clearInterval(timer);
+  const p = preguntas[indice];
+
+  respuestasParaServidor[indice] = opt;
+
+  const esCorrecta = (opt === p.correcta);    
+
+  respuestas.push({
+    pregunta: p.texto,
+    respuesta: opt === 'skip' ? 'TIEMPO AGOTADO' : p.opciones[opt],
+    correcta: p.opciones[p.correcta],
+    estado: esCorrecta ? 'OK' : (opt === 'skip' ? 'TIEMPO' : 'ERROR'),
+    excluyente: p.excluyente === true || p.excluyente === "SI",
+    tiempo: Math.floor((Date.now() - tiempoInicioPregunta) / 1000)
+  });
+
+  indice++;
+  setTimeout(mostrarPregunta, 100);
+}
+
+function iniciarReloj(seg) {
+  clearInterval(timer);
+  tiempoRestante = seg;
+  const fill = document.getElementById('timerFill');
+  timer = setInterval(() => {
+    tiempoRestante--;
+    fill.style.width = (tiempoRestante / seg * 100) + "%";
+    document.getElementById('txtReloj').innerText = `00:${tiempoRestante.toString().padStart(2,'0')}`;
+    if(tiempoRestante <= 0) procesarRespuesta('skip');
+  }, 1000);
+}
+
+function finalizar() {
+  window.onbeforeunload = null;
+  Swal.fire({ title:'Evaluando...', allowOutsideClick:false, didOpen:()=>Swal.showLoading() });
+
+  google.script.run.withSuccessHandler(res => {
+    Swal.close();
+    document.getElementById('pantallaPreguntas').style.display = 'none';
+    document.getElementById('pantallaResultados').style.display = 'block';
+    document.getElementById('notaFinal').innerText = res.nota;
+
+    const visual = document.getElementById('resultadoVisual');
+    const feedback = document.getElementById('feedbackPanel');
+    
+    if (res.aprobado) {
+      visual.innerHTML = '<i class="material-icons large green-text">check_circle</i>';
+      feedback.innerHTML = '<h5 class="green-text bold">¡APROBADO!</h5>';
+    } else {
+      visual.innerHTML = '<i class="material-icons large red-text">cancel</i>';
+      const motivo = res.excluyente ? "Fallaste en una pregunta EXCLUYENTE." : "No alcanzaste el 75%.";
+      feedback.innerHTML = `<h5 class="red-text bold">REPROBADO</h5><p>${motivo}</p>`;
+      document.getElementById('btnVerFallos').style.display = 'inline-block';
+    }
+  }).procesarExamenDesdeCliente(respuestasParaServidor, dniActual);
+}
+
+function mostrarRevision() {
+
+  const tabla = document.getElementById('tablaFallos');
+
+  if (!Array.isArray(respuestas)) {
+    console.error("La variable respuestas no es un array válido");
+    return;
+  }
+
+  // Mejora UX: contar errores
+  const errores = respuestas.filter(r => r.estado !== 'OK').length;
+
+  tabla.innerHTML = `
+  <tr>
+    <td colspan="4" style="font-size:1.1rem; padding:10px;">
+      <b>Errores cometidos: ${errores}</b> de ${respuestas.length}
+    </td>
+  </tr>
+  <tr>
+    <th>Pregunta</th>
+    <th>Tu Respuesta</th>
+    <th>Respuesta Correcta</th>
+    <th>Estado</th>
+  </tr>`;
+
+  respuestas.forEach(r => {
+
+    const esError = r.estado !== 'OK';
+
+    const fila = `
+    <tr class="${esError ? 'incorrect-row' : ''}">
+
+      <td style="max-width:400px;">
+        ${r.pregunta}
+        ${r.excluyente && esError 
+          ? '<br><span class="red-text bold">⚠ FALLO EXCLUYENTE</span>' 
+          : ''}
+      </td>
+
+      <td>
+        ${r.respuesta || '-'} 
+        ${esError ? '❌' : '✅'}
+      </td>
+
+      <td>
+        ${esError 
+          ? '<span class="green-text bold">'+ (r.correcta || '-') +' ✅</span>' 
+          : '-'}
+      </td>
+
+      <td>
+        ${r.estado === 'OK'
+          ? '<span class="green-text bold">Correcta</span>'
+          : '<span class="red-text bold">Incorrecta</span>'}
+      </td>
+
+    </tr>`;
+
+    tabla.innerHTML += fila;
+
+  });
+
+  document.getElementById('listaFallos').style.display = 'block';
+
+  document.getElementById('listaFallos').scrollIntoView({
+    behavior: 'smooth'
+  });
+
+}
+  </script>
+</body>
+
+</html>

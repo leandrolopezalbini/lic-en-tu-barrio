@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+  <!-- Materialize -->
+  <link rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <!-- Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- CSS GLOBAL -->
+  <?!= HtmlService.createHtmlOutputFromFile('Styles').getContent(); ?>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+body{
+  background:#f4f7f9;
+  display:flex;
+  align-items:center;
+}
+
+.card-title{
+  font-weight:bold !important;
+  color:#333;
+}
+</style>
+</head>
+
+<body>
+  <div class="container">
+
+    <a href="<?= inst.url ?>" class="hero-link">
+      <div class="hero">
+        <img src="<?= inst.logo ?>">
+        <h4 class="bold blue-text text-darken-4">
+          <?= inst.nombre ?>
+        </h4>
+        <p class="grey-text">Licencia en tu barrio</p>
+      </div>
+    </a>
+    <div class="row">
+      <div class="col s12 m4">
+        <div class="card menu-card center-align" onclick="window.top.location.href='<?= inst.url ?>?p=inscripcion'">
+          <div class="card-content">
+            <div class="icon-circle"><i class="material-icons">person_add</i></div>
+            <span class="card-title">Inscripción</span>
+            <p>Registro de nuevos alumnos</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col s12 m4">
+        <div class="card menu-card center-align" onclick="window.top.location.href='<?= inst.url ?>?p=examen'">
+          <div class="card-content">
+            <div class="icon-circle"><i class="material-icons">assignment_turned_in</i></div>
+            <span class="card-title">Rendir Examen</span>
+            <p>Evaluación teórica</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col s12 m4">
+        <div class="card menu-card center-align blue darken-4 white-text" onclick="abrirLoginPersonal()">
+          <div class="card-content">
+            <div class="icon-circle"><i class="material-icons">lock</i></div>
+            <span class="card-title white-text">Panel Interno</span>
+            <p>Mesa / Instructores / Admin</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function abrirLoginPersonal() {
+      Swal.fire({
+        title: 'Acceso Personal',
+        html: `
+          <input type="number" id="loginDni" class="swal2-input" placeholder="DNI">
+          <input type="password" id="loginPass" class="swal2-input" placeholder="Contraseña">
+        `,
+        confirmButtonText: 'Entrar',
+        showCancelButton: true,
+        focusConfirm: false,
+        preConfirm: () => {
+          const dni = Swal.getPopup().querySelector('#loginDni').value;
+          const pass = Swal.getPopup().querySelector('#loginPass').value;
+          if (!dni || !pass) {
+            Swal.showValidationMessage(`Por favor, complete ambos campos`);
+          }
+          return { dni: dni, pass: pass };
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          validarCredenciales(result.value);
+        }
+      });
+    }
+
+    function validarCredenciales(datos) {
+      // Mostramos un loader de SweetAlert mientras valida
+      Swal.fire({ title: 'Validando...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+      google.script.run.withSuccessHandler(res => {
+        Swal.close();
+        if (res.success) {
+          if (res.requiereCambio) {
+            solicitarCambioClave(datos.dni);
+          } else {
+            const perfilUrl = { 
+              'Instructor': 'instructores', 
+              'Mesa': 'mesa', 
+              'Super': 'super' 
+            };
+
+            const pagina = perfilUrl[res.perfil];
+            if (pagina) {
+              // Usamos window.top.location para salir de frames si fuera necesario
+              window.top.location.href = "<?= inst.url ?>?p=" + pagina + "&dni=" + datos.dni;
+            } else {
+              Swal.fire('Error', 'Perfil no reconocido: ' + res.perfil, 'error');
+            }
+          }
+        } else {
+          Swal.fire('Error', res.message, 'error');
+        }
+      }).loginPersonal(datos.dni, datos.pass);
+    }
+
+    function solicitarCambioClave(dni) {
+      Swal.fire({
+        title: 'Cambio Obligatorio',
+        text: 'Por seguridad, elija una clave distinta a "1234"',
+        input: 'password',
+        inputPlaceholder: 'Nueva contraseña',
+        allowOutsideClick: false,
+        confirmButtonText: 'Actualizar',
+        preConfirm: (nuevaPass) => {
+          // VALIDACIÓN EN EL FRONTEND
+          if (nuevaPass === "12345") {
+            Swal.showValidationMessage('No puedes usar la clave por defecto');
+          } else if (nuevaPass.length < 5) {
+            Swal.showValidationMessage('La clave debe tener al menos 5 caracteres');
+          }
+          return nuevaPass;
+        }
+      }).then(res => {
+        if(res.isConfirmed){
+          Swal.fire({ title: 'Procesando...', didOpen: () => Swal.showLoading() });
+
+          google.script.run.withSuccessHandler(resultado => {
+            if(resultado.success) {
+              Swal.fire('¡Éxito!', 'Clave actualizada. Inicia sesión con tu nueva contraseña.', 'success')
+                .then(() => abrirLoginPersonal());
+            } else {
+              Swal.fire('Error', resultado.message, 'error');
+            }
+          }).actualizarPasswordPersonal(dni, res.value);
+        }
+      });
+    }
+  </script>
+</body>
+
+</html>

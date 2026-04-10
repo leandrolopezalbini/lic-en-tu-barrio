@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+  <!-- Materialize -->
+  <link rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <!-- Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- CSS GLOBAL -->
+  <?!= HtmlService.createHtmlOutputFromFile('Styles').getContent(); ?>
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+    :root {
+      --admin-color: #263238;
+    }
+
+    body {
+      background: #f5f5f5;
+    }
+
+    .nav-admin {
+      background: var(--admin-color);
+      padding: 0 20px;
+    }
+
+    .card-stat {
+      border-radius: 15px;
+      color: white;
+      padding: 20px;
+    }
+
+    .tab-content {
+      padding: 20px;
+      background: white;
+      border-radius: 0 0 15px 15px;
+    }
+
+    .tabs .tab a {
+      color: rgba(38, 50, 56, 0.7);
+    }
+
+    .tabs .tab a:hover,
+    .tabs .tab a.active {
+      color: #263238;
+    }
+
+    .tabs .indicator {
+      background-color: #263238;
+    }
+    .hero {
+  text-align: center;
+  margin-bottom: 40px;
+  width: 100%;
+  cursor: pointer;
+}
+
+.hero img {
+  max-height: 100px;
+  margin-bottom: 10px;
+}
+
+.hero-link{
+  text-decoration:none;
+  color:inherit;
+  display:block;
+}
+
+.hero:hover{
+  opacity:0.9;
+  transition:0.2s;
+}
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <a href="<?= inst.url ?>" class="hero-link" target="_top">
+      <div class="hero">
+        <img src="<?= inst.logo ?>" alt="Logo Institución">
+        <h4 class="bold blue-text text-darken-4">
+          <?= inst.nombre ?>
+        </h4>
+        <p class="grey-text">Licencia en tu barrio</p>
+      </div>
+    </a>
+
+    <nav class="nav-admin">
+      <div class="nav-wrapper">
+        <span class="brand-logo" style="font-size: 1.2rem;">Panel administrador</span>
+        <ul class="right">
+          <li>
+            <img src="<?= inst.logo ?>" style="max-height: 40px; vertical-align: middle;">
+          </li>
+        </ul>
+      </div>
+      <a href="<?= inst.url ?>" target="_top" class="btn-large blue darken-4">Salir</a>
+    </nav>
+
+    <div style="margin-top:20px;">
+      <div class="row">
+        <div class="col s12">
+          <ul class="tabs z-depth-1" style="border-radius:15px 15px 0 0;">
+            <li class="tab col s2"><a class="active" href="#tabEstadisticas">Estadísticas</a></li>
+            <li class="tab col s2"><a href="#tabCursos">Cursos / Sedes</a></li>
+            <li class="tab col s2"><a href="#tabPreguntas">Preguntas</a></li>
+            <li class="tab col s3"><a href="#tabAlumnos">Gestión Alumnos</a></li>
+            <li class="tab col s3"><a href="#tabTrazabilidad">Historial</a></li>
+            <li class="tab col s3"><a href="#tabCupos">Disponibilidad</a></li>
+          </ul>
+        </div>
+
+      <div id="tabEstadisticas" class="col s12 tab-content z-depth-1">
+        <div style="padding: 10px;">
+          <div class="row">
+            <div class="col s8">
+              <h5>Estado de Cupos por Sede</h5>
+            </div>
+            <div class="col s4 right-align">
+              <button class="btn blue-grey" onclick="cargarTableroCupos()">
+          <i class="material-icons left">refresh</i>Actualizar
+        </button>
+            </div>
+          </div>
+
+          <table class="highlight centered responsive-table card-panel">
+            <thead>
+              <tr style="background-color: #f2f2f2;">
+                <th>Barrio</th>
+                <th>Institución / Sede</th>
+                <th>Cupo Máximo</th>
+                <th>Inscriptos</th>
+                <th>Disponibilidad</th>
+              </tr>
+            </thead>
+            <tbody id="tablaCuposEstadisticas">
+              <tr>
+                <td colspan="5">Actualizar datos...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div id="tabCupos" class="col s12">
+        <table class="striped">
+          <thead>
+            <tr>
+              <th>Barrio</th>
+              <th>Institución</th>
+              <th>Cupo Máx</th>
+              <th>Inscriptos</th>
+              <th>Disponible</th>
+            </tr>
+          </thead>
+          <tbody id="tablaCuposBody">
+          </tbody>
+        </table>
+      </div>
+
+      <div id="tabCursos" class="col s12 tab-content z-depth-1">
+        <button class="btn-floating btn-large waves-effect waves-light red right" onclick="modalNuevoCurso()">
+          <i class="material-icons">add</i>
+        </button>
+        <h5>Configuración de Sedes y Cupos</h5>
+        <table class="highlight">
+          <thead>
+            <tr>
+              <th>Institución/Barrio</th>
+              <th>Fecha Clase</th>
+              <th>Cupo Máx</th>
+              <th>Inscriptos</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tablaCursosAdmin"></tbody>
+        </table>
+      </div>
+
+      <div id="tabPreguntas" class="col s12 tab-content z-depth-1">
+        <h5>Banco de Preguntas Examen</h5>
+        <button class="btn green" onclick="modalNuevaPregunta()">Nueva Pregunta</button>
+        <div id="listaPreguntas" style="margin-top: 20px;"></div>
+      </div>
+
+      <div id="tabAlumnos" class="col s12 tab-content z-depth-1">
+        <div class="row">
+          <div class="input-field col s8">
+            <input type="text" id="dniAdminBusqueda" placeholder="DNI, Nombre o Apellido">
+          </div>
+          <div class="col s4" style="padding-top: 15px;">
+            <button class="btn blue" onclick="buscarAlumnoAdmin()">Editar / Inscribir</button>
+          </div>
+        </div>
+        <div id="formEdicionAlumno"></div>
+      </div>
+
+
+      <div id="tabTrazabilidad" class="col s12 tab-content z-depth-1">
+        <h5>Log de Auditoría</h5>
+        <div id="logContenedor"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <script>
+  const DNI_OPERADOR = "<?= user.dni ?>"; 
+  const PERFIL_OPERADOR = "<?= user.perfil ?>";
+
+  document.addEventListener('DOMContentLoaded', function() {
+    M.Tabs.init(document.querySelectorAll('.tabs'));
+    cargarTableroCupos();
+    
+    // Lazy Loading: Solo carga datos cuando entras a la pestaña
+    const tabListeners = {
+      '#tabPreguntas': cargarPreguntas,
+      '#tabCursos': cargarTablaCursos,
+      '#tabTrazabilidad': cargarLogs,
+      '#tabCupos': cargarTableroCupos
+    };
+
+    document.querySelectorAll('.tabs a').forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        const target = e.target.getAttribute('href');
+        if (tabListeners[target]) tabListeners[target]();
+      });
+    });
+  });
+
+  // --- UTILIDADES ---
+  function formatFechaParaInput(fechaStr) {
+    if (!fechaStr) return "";
+    let fecha = new Date(fechaStr);
+    if (isNaN(fecha.getTime())) return "";
+    // Ajuste de zona horaria para que no te reste un día
+    fecha.setMinutes(fecha.getMinutes() + fecha.getTimezoneOffset());
+    return fecha.toISOString().split('T')[0];
+  }
+
+  // --- GESTIÓN DE ALUMNOS ---
+  function buscarAlumnoAdmin() {
+    const busqueda = document.getElementById('dniAdminBusqueda').value;
+    if(!busqueda) return Swal.fire('Atención', 'Ingresa DNI o Apellido', 'warning');
+    document.getElementById('formEdicionAlumno').innerHTML = '<div class="center"><div class="preloader-wrapper small active"><div class="circle"></div></div></div>';
+    google.script.run.withSuccessHandler(res => {
+      if(!res.success) return (document.getElementById('formEdicionAlumno').innerHTML = "", Swal.fire('Info', res.message, 'info'));
+      mostrarSelectorAlumnos(res.alumnos);
+    }).buscarAlumnoParaEdicion(busqueda);
+  }
+
+  function mostrarSelectorAlumnos(alumnos) {
+    let html = '<ul class="collection with-header z-depth-1">';
+    alumnos.forEach(al => {
+      html += `<li class="collection-item avatar">
+        <i class="material-icons circle blue">person</i>
+        <span class="title"><b>${al.apellido}, ${al.nombre}</b></span>
+        <p>DNI: ${al.dni} <br> Sede: ${al.institucion}</p>
+        <button class="secondary-content btn blue darken-4" onclick="abrirGestionIntegral('${al.dni}')">GESTIONAR</button>
+      </li>`;
+    });
+    document.getElementById('formEdicionAlumno').innerHTML = html + '</ul>';
+  }
+
+  function obtenerDatosEdicionCompleta(dni) {
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+      // 1. Obtener datos del Alumno
+      const sheetIns = getSheet(SHEETS.INSCRIPCIONES);
+      const dataIns = sheetIns.getDataRange().getValues();
+      const dBusqueda = dni.toString().replace(/\D/g, "");
+
+      let alumno = null;
+      for (let i = 1; i < dataIns.length; i++) {
+        if (dataIns[i][COL.DNI].toString().replace(/\D/g, "") === dBusqueda) {
+          alumno = {
+            nombre: dataIns[i][COL.NOM],
+            apellido: dataIns[i][COL.APE],
+            dni: dataIns[i][COL.DNI],
+            fechaNac: dataIns[i][COL.FNAC],
+            institucion: dataIns[i][COL.INST],
+            asistencia: dataIns[i][COL.ASIST] || 0
+          };
+          break;
+        }
+      }
+
+      if (!alumno) return { success: false, message: "Alumno no encontrado." };
+
+      // 2. Obtener lista de Sedes (para el <select> del formulario)
+      const sheetSedes = getSheet(SHEETS.BARRIOS);
+      const dataSedes = sheetSedes.getDataRange().getValues();
+      const sedes = dataSedes.slice(1).map(f => ({ nombre: f[1] })).filter(s => s.nombre);
+
+      return { 
+        success: true, 
+        data: alumno, 
+        sedes: sedes 
+      };
+
+    } catch (e) {
+      return { success: false, message: "Error en servidor: " + e.toString() };
+    }
+  }
+
+  function eliminarAlumno(dni) {
+    Swal.fire({
+      title: '¿Estás seguro?',
+      text: "Esta acción eliminará la inscripción del DNI " + dni + " permanentemente.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire({ title: 'Eliminando...', didOpen: () => Swal.showLoading() });
+
+        // Llamamos a la función que ya tenés en el servidor
+        google.script.run.withSuccessHandler(res => {
+          Swal.fire('Eliminado', res, 'success');
+          document.getElementById('formEdicionAlumno').innerHTML = ""; // Limpiamos la ficha
+          buscarAlumnoAdmin(); // Refrescamos la búsqueda
+        }).cancelarInscripcion(dni, DNI_OPERADOR); // Le pasamos quién lo borró para el LOG
+      }
+    });
+  }
+  function recolectarYGuardar(dniOriginal) {
+    const datos = {
+      nombre: document.getElementById('editNombre').value,
+      apellido: document.getElementById('editApellido').value,
+      dni: document.getElementById('editDni').value,
+      fechaNac: document.getElementById('editFechaNac')?.value || '',
+      institucion: document.getElementById('editSede').value,
+      asistencia: document.getElementById('editAsistencia').value
+    };
+    Swal.fire({ title: 'Guardando...', didOpen: () => Swal.showLoading() });
+    google.script.run.withSuccessHandler(r => {
+      Swal.fire(r.success ? "Éxito" : "Error", r.message, r.success ? "success" : "error");
+      if(r.success) document.getElementById('formEdicionAlumno').innerHTML = "";
+    }).actualizarDatosAlumno(dniOriginal, datos, DNI_OPERADOR);
+  
+  }
+
+function abrirGestionIntegral(dni) {
+  Swal.fire({ title: 'Obteniendo ficha completa...', didOpen: () => Swal.showLoading() });
+  
+  google.script.run.withSuccessHandler(res => {
+    Swal.close();
+    if(!res.success) return Swal.fire('Error', res.message, 'error');
+    
+    const al = res.data;
+    let sedesHtml = res.sedes.map(s => `<option value="${s.nombre}" ${s.nombre === al.institucion ? 'selected' : ''}>${s.nombre}</option>`).join('');
+
+    let formHtml = `
+      <div class="card-panel z-depth-2" style="border-radius:15px; text-align:left;">
+        <div class="row">
+          <div class="input-field col s12 m6">
+            <input id="editNombre" type="text" value="${al.nombre}">
+            <label class="active">Nombre</label>
+          </div>
+          <div class="input-field col s12 m6">
+            <input id="editApellido" type="text" value="${al.apellido}">
+            <label class="active">Apellido</label>
+          </div>
+          <div class="input-field col s12 m6">
+            <input id="editDni" type="text" value="${al.dni}">
+            <label class="active">DNI</label>
+          </div>
+          <div class="input-field col s12 m6">
+            <input id="editFechaNac" type="date" value="${formatFechaParaInput(al.fechaNac)}">
+            <label class="active">Fecha de Nacimiento</label>
+          </div>
+          <div class="input-field col s12 m6">
+            <select id="editSede" class="browser-default">${sedesHtml}</select>
+            <label class="active">Sede / Institución</label>
+          </div>
+          <div class="input-field col s6 m4">
+            <input id="editAsistencia" type="number" value="${al.asistencia}">
+            <label class="active">Presentes</label>
+          </div>
+        </div>
+        
+        <div class="center-align" style="margin-top:20px; display:flex; gap:10px; justify-content:center;">
+          <button class="btn blue darken-4" onclick="recolectarYGuardar('${al.dni}', document.getElementById('editDni').value)">
+            <i class="material-icons left">save</i>Guardar Cambios
+          </button>
+          <button class="btn orange darken-3" onclick="verDetalleExamenAdmin('${al.dni}')">
+            <i class="material-icons left">assignment</i>Ver Examen
+          </button>
+          <button class="btn red darken-4" onclick="eliminarAlumno('${al.dni}')">
+            <i class="material-icons left">delete</i>Eliminar
+          </button>
+        </div>
+      </div>
+    `;
+    document.getElementById('formEdicionAlumno').innerHTML = formHtml;
+  }).obtenerDatosEdicionCompleta(dni); // Necesitás esta función en Database.gs
+}
+
+// Visualización de respuestas para SuperUsuario
+function verDetalleExamenAdmin(dni) {
+  Swal.fire({ title: 'Buscando examen...', didOpen: () => Swal.showLoading() });
+  google.script.run.withSuccessHandler(res => {
+    Swal.close();
+    if(!res.success) return Swal.fire('Atención', 'Este alumno aún no ha rendido.', 'info');
+    
+    let html = `<p><b>Nota:</b> ${res.nota}% | <b>Fecha:</b> ${res.fecha}</p>
+                <div style="text-align:left; max-height:400px; overflow-y:auto;">
+                <table class="striped">`;
+    res.respuestas.forEach(r => {
+      html += `<tr>
+        <td>${r.pregunta}<br><small>Respuesta: ${r.respuesta}</small></td>
+        <td class="${r.estado === 'OK' ? 'green-text' : 'red-text'}"><b>${r.estado}</b></td>
+        <td>${r.puntosObtenidos} pts</td>
+      </tr>`;
+    });
+    html += `</table></div>`;
+    Swal.fire({ title: 'Detalle Técnico', html: html, width: '750px' });
+  }).obtenerDetalleExamen(dni);
+}
+
+  // --- PREGUNTAS, LOGS Y CUPOS (Igual a tu original pero optimizado) ---
+  function cargarPreguntas() {
+    google.script.run.withSuccessHandler(preguntas => {
+      let html = '<ul class="collapsible">';
+      preguntas.forEach((p, i) => {
+        html += `<li><div class="collapsible-header"><b>${i+1}.</b> ${p.pregunta.substring(0,50)}...</div>
+          <div class="collapsible-body"><p>${p.pregunta}</p><button class="btn-flat red-text" onclick="eliminarPregunta(${i})">Eliminar</button></div></li>`;
+      });
+      document.getElementById('listaPreguntas').innerHTML = html + '</ul>';
+      M.Collapsible.init(document.querySelectorAll('.collapsible'));
+    }).obtenerPreguntas();
+  }
+
+  function cargarLogs() {
+    google.script.run.withSuccessHandler(logs => {
+      let html = `<table class="highlight"><thead><tr><th>Fecha</th><th>Operador</th><th>Acción</th><th>Detalle</th></tr></thead><tbody>`;
+      logs.forEach(l => { html += `<tr><td>${new Date(l[0]).toLocaleString()}</td><td>${l[2]}</td><td><span class="chip blue white-text">${l[3]}</span></td><td>${l[4]}</td></tr>`; });
+      document.getElementById('logContenedor').innerHTML = html + `</tbody></table>`;
+    }).obtenerLogs();
+  }
+
+  function cargarTableroCupos() {
+    google.script.run.withSuccessHandler(datos => {
+      let html = "";
+      datos.forEach(d => {
+        html += `<tr><td>${d.barrio}</td><td><b>${d.sede}</b></td><td class="center">${d.max}</td><td class="center">${d.actual}</td><td class="center">${d.disponible}</td></tr>`;
+      });
+      document.getElementById('tablaCuposBody').innerHTML = html;
+      document.getElementById('tablaCuposEstadisticas').innerHTML = html;
+    }).obtenerEstadoCupos();
+  }
+
+  // Para que no rompa nada:
+  function cargarTablaCursos() {
+    google.script.run.withSuccessHandler(data => {
+      const tabla = document.getElementById('tablaCursosAdmin');
+      tabla.innerHTML = "";
+
+      data.forEach(c => {
+        tabla.innerHTML += `
+          <tr>
+            <td>${c.institucion}</td>
+            <td>${c.fecha1 || '-'}</td>
+            <td>${c.cupo}</td>
+            <td>${c.actuales}</td>
+            <td>
+              <button class="btn-small blue">Editar</button>
+              <button class="btn-small red">Eliminar</button>
+            </td>
+          </tr>
+        `;
+      });
+
+    }).obtenerTodasLasSedes();
+  }
+
+  function modalNuevoCurso() {
+    Swal.fire('Falta implementar', 'Modal de curso pendiente', 'info');
+  }
+
+  function modalNuevaPregunta() {
+    Swal.fire('Falta implementar', 'Alta de preguntas pendiente', 'info');
+  }
+  
+  
+</script>
+</body>
+
+</html>
