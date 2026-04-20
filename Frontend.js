@@ -90,13 +90,13 @@ function enviarExamen() {
     return M.toast({html: 'No se detectaron respuestas para procesar', classes: 'orange'});
   }
 
-  const respuestas = typeof data[i][5] === "string"
-  ? JSON.parse(data[i][5])
-  : data[i][5];
+  const respuestas = typeof data[i][COL_EX.RP] === "string"
+  ? JSON.parse(data[i][COL_EX.RP])
+  : data[i][COL_EX.RP];
   inputs.forEach(input => {
     const nameParts = (input.name || '').split('_');
     if (nameParts.length < 2) return;
-    const index = nameParts[1];
+    const index = nameParts[COL_INS.BARRIOID];
     respuestas[index] = (input.value || '').toLowerCase();
   });
 

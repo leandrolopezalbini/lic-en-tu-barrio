@@ -28,7 +28,7 @@ function actualizarSede(nombreOriginal, datosNuevos, dniOperador) {
   let encontrada = false;
 
   for (let i = 1; i < data.length; i++) {
-    if (data[i][1] === nombreOriginal) {
+    if (data[i][COL_BAR.INSTITUCION] === nombreOriginal) {
       const fila = i + 1;
       
       // Actualizamos los datos básicos de la sede en Barrios/Instituciones
@@ -74,7 +74,7 @@ function eliminarSedeServidor(institucion, dniOperador) {
   
   // 1. Verificar si hay alumnos inscriptos en esa sede
   const alumnos = sheetIns.getDataRange().getValues();
-  const tieneAlumnos = alumnos.some(fila => fila[9].toString().trim() === institucion.trim());
+  const tieneAlumnos = alumnos.some(fila => fila[COL_BAR.INSTITUCION].toString().trim() === institucion.trim());
   
   if (tieneAlumnos) {
     return { 
@@ -86,7 +86,7 @@ function eliminarSedeServidor(institucion, dniOperador) {
   // 2. Si está vacía, proceder a eliminar la fila
   const sedes = sheetSedes.getDataRange().getValues();
   for (let i = 1; i < sedes.length; i++) {
-    if (sedes[i][1].toString().trim() === institucion.trim()) {
+    if (sedes[i][COL_BAR.INST].toString().trim() === institucion.trim()) {
       sheetSedes.deleteRow(i + 1);
       registrarAccion(dniOperador, `ELIMINÓ SEDE PERMANENTEMENTE: ${institucion}`);
       return { success: true, message: "Sede eliminada correctamente." };
@@ -107,20 +107,20 @@ function obtenerTodasLasSedes() {
   const conteo = {};
   inscripciones.shift();
   inscripciones.forEach(r => {
-    conteo[r[9]] = (conteo[r[9]] || 0) + 1;
+    conteo[r[COL_BAR.INSTITUCION]] = (conteo[r[COL_BAR.INSTITUCION]] || 0) + 1;
   });
 
   return data.map(r => ({
-    barrio: r[0],
-    institucion: r[1],
-    direccion: r[2],
-    cupo: r[3],
-    fecha1: r[4],
-    fecha2: r[5],
-    fechaEx: r[6],
-    estado: r[7],
-    actuales: conteo[r[1]] || 0,
-    horario: r[9]
+    barrio: r[COL_INS.BARRIO],
+    institucion: r[COL_BAR.INSTITUCION],
+    direccion: r[COL_INS.BARRIODIRECCION],
+    cupo: r[COL_INS.BARRIOCUPO],
+    fecha1: r[COL_INS.BARRIOFECHA1],
+    fecha2: r[COL_INS.BARRIOFECHA2],
+    fechaEx: r[COL_INS.BARRIOFECHA_EX],
+    estado: r[COL_INS.ESTADO_TRAMITE],
+    actuales: conteo[r[COL_BAR.INSTITUCION]] || 0,
+    horario: r[COL_INS.BARRIOHORARIO]
   }));
 }
 
@@ -132,19 +132,19 @@ function obtenerInscriptosPorSede(nombreSede) {
   // Filtrar alumnos que pertenezcan a la sede (Columna J - índice 9)
   const filtrados = data.filter((fila, index) => {
     if (index === 0) return false; // Omitir cabecera
-    return fila[9].toString().trim() === nombreSede.trim();
+    return fila[COL_BAR.INSTITUCION].toString().trim() === nombreSede.trim();
   });
 
   if (filtrados.length === 0) return { success: false, message: "No hay alumnos inscriptos en esta sede." };
 
   // Formatear datos para el reporte
   const reporte = filtrados.map(f => ({
-    Apellido: f[2],
-    Nombre: f[1],
-    DNI: f[3],
-    Telefono: f[5],
-    Categoria: f[7],
-    Asistencia: f[13] + "%"
+    Apellido: f[COL_INS.APELLIDO],
+    Nombre: f[COL_INS.NOMBRE],
+    DNI: f[COL_INS.DNI],
+    Telefono: f[COL_INS.TELEFONO],
+    Categoria: f[COL_INS.CATEGORIA],
+    Asistencia: f[COL_INS.ASISTENCIA] + "%"
   }));
 
   return { success: true, datos: reporte, sede: nombreSede };
@@ -161,7 +161,7 @@ function obtenerEstadoCupos() {
   // Crear un mapa de conteo: { "Nombre Sede": cantidad }
   const conteoAlumnos = {};
   alumnosData.forEach(fila => {
-    const sede = fila[9]; // Columna J: Institución
+    const sede = fila[COL_BAR.INSTITUCION]; // Columna J: Institución
     if (sede) {
       conteoAlumnos[sede] = (conteoAlumnos[sede] || 0) + 1;
     }
@@ -169,12 +169,12 @@ function obtenerEstadoCupos() {
 
   // Mapear los resultados finales
   return sedesData.map(r => {
-    const sedeNombre = r[1];
-    const cupoMax = parseInt(r[3]) || 0;
+    const sedeNombre = r[COL_BAR.INSTITUCION];
+    const cupoMax = parseInt(r[COL_INS.BARRIOCUPO]) || 0;
     const inscriptosReal = conteoAlumnos[sedeNombre] || 0;
     
     return {
-      barrio: r[0],
+      barrio: r[COL_INS.BARRIO],
       sede: sedeNombre,
       max: cupoMax,
       actual: inscriptosReal,
@@ -197,9 +197,9 @@ function actualizarNombreSedeEnAlumnos(viejoNombre, nuevoNombre, nuevasFechas = 
       
       // 2. Si se pasaron nuevas fechas, las sincronizamos de una vez
       if (nuevasFechas) {
-        data[i][COL_INS.F1] = nuevasFechas.fecha1;
-        data[i][COL_INS.F2] = nuevasFechas.fecha2;
-        data[i][COL_INS.F_EX] = nuevasFechas.fechaEx;
+        data[i][COL_INS.CURSADA1] = nuevasFechas.fecha1;
+        data[i][COL_INS.CURSADA2] = nuevasFechas.fecha2;
+        data[i][COL_INS.F_EXAMEN] = nuevasFechas.fechaEx;
       }
       huboCambios = true;
     }
@@ -220,10 +220,10 @@ function obtenerSedesActivas() {
     data.shift(); 
 
     return data
-      .filter(r => r[7] && r[7].toString().toUpperCase().trim() === "ACTIVO")
+      .filter(r => r[COL_INS.ESTADO_TRAMITE] && r[COL_INS.ESTADO_TRAMITE].toString().toUpperCase().trim() === "ACTIVO")
       .map(r => ({
-        barrio: r[0],
-        institucion: r[1]
+        barrio: r[COL_INS.BARRIO],
+        institucion: r[COL_BAR.INSTITUCION]
       }));
   } catch (e) {
     console.error("Error en obtenerSedesActivas: " + e.message);
@@ -239,8 +239,8 @@ function obtenerDatosEdicionCompleta(dni) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sedesData = ss.getSheetByName("BarriosInstituciones").getDataRange().getValues();
     const sedes = sedesData.slice(1)
-      .filter(r => r[1] !== "")
-      .map(r => ({ barrio: r[0], nombre: r[1] }));
+      .filter(r => r[COL_BAR.INSTITUCION] !== "")
+      .map(r => ({ barrio: r[COL_INS.BARRIO], nombre: r[COL_BAR.INSTITUCION] }));
 
     return { success: true, data: resMesa.data, sedes: sedes };
   } catch (e) {
@@ -269,9 +269,9 @@ function actualizarDatosAlumno(dniOriginal, datos, dniOperador) {
           
           let barrio = dataIns[i][COL_INS.BARRIO];
           let fechasExamen = [
-            dataIns[i][COL_INS.F1],
-            dataIns[i][COL_INS.F2],
-            dataIns[i][COL_INS.F_EX]
+            dataIns[i][COL_INS.CURSADA1],
+            dataIns[i][COL_INS.CURSADA2],
+            dataIns[i][COL_INS.F_EXAMEN]
           ];
 
           // Si el admin cambió la sede, actualizamos automáticamente las fechas de esa cursada
@@ -298,7 +298,7 @@ function actualizarDatosAlumno(dniOriginal, datos, dniOperador) {
           : dataIns[i][COL_INS.DNI];
 
           // ESCRITURA EN BLOQUE 1: Datos Personales (Columnas B a J)          
-          sheetIns.getRange(fila, COL_INS.NOM + 1, 1, 9).setValues([[
+          sheetIns.getRange(fila, COL_INS.NOMBRE  + 1, 1, 9).setValues([[
             datos.nombre, 
             datos.apellido, 
             dniLimpio,
@@ -311,10 +311,10 @@ function actualizarDatosAlumno(dniOriginal, datos, dniOperador) {
           ]]);
 
           // ESCRITURA EN BLOQUE 2: Cursada y Notas (Columnas iNSCRIPCION K a P)
-          sheetIns.getRange(fila, COL_INS.F1 + 1, 1, 6).setValues([[
-            fechasExamen[0], 
-            fechasExamen[1], 
-            fechasExamen[2], 
+          sheetIns.getRange(fila, COL_INS.CURSADA1 + 1, 1, 6).setValues([[
+            fechasExamen[COL_INS.CURSADA1], 
+            fechasExamen[COL_INS.CURSADA2], 
+            fechasExamen[COL_INS.F_EXAMEN], 
             datos.asistencia || 0, 
             datos.nota || dataIns[i][COL_INS.NOTA], // Mantenemos nota previa si no viene nueva
             dataIns[i][COL_INS.ESTADO]

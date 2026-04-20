@@ -48,7 +48,8 @@ body{
 
         <div class="row">
           <div class="input-field col s12 m6">
-            <i class="material-icons prefix">badge</i><input type="number" id="dni" oninput="this.value = this.value.replace(/\D/g, '')"><label for="dni">D N I</label>
+            <i class="material-icons prefix">badge</i>
+            <input type="number" id="dni" inputmode="numeric" oninput="this.value = this.value.replace(/\D/g, '')"><label for="dni">D N I</label>
           </div>
           <div class="input-field col s12 m6">
             <i class="material-icons prefix">cake</i><input type="date" id="fechaNacimiento" ><label for="fechaNacimiento">Fecha de Nacimiento</label>
@@ -109,6 +110,7 @@ body{
       M.AutoInit();
       cargarLugares();
     });
+    console.log("google:", typeof google);
 
     function cargarLugares() {
       google.script.run.withSuccessHandler(opciones => {
@@ -258,7 +260,33 @@ body{
       btn.innerHTML = 'Enviar Inscripción <i class="material-icons right">send</i>';
     }
  
+    function ejecutarConGAS(nombreFuncion, callback, ...args) {
+      if (typeof google === "undefined" || !google.script || !google.script.run) {
+        console.error("❌ GAS no disponible");
+        return;
+      }
     
+      let runner = google.script.run.withSuccessHandler(callback);
+      runner[nombreFuncion](...args);
+    }
+
+    setTimeout(() => {
+      try {
+        google.script.run.withSuccessHandler(r => {
+          console.log("GAS OK:", r);
+        }).getScriptUrl();
+      } catch (e) {
+        console.error("ERROR:", e);
+      }
+    }, 2000);
+
+    //prueba rapida 
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log("google:", typeof google);
+      M.AutoInit();
+      cargarLugares();
+    });
+
     function calcularEdad(fecha) {
       const hoy = new Date();
       const cumple = new Date(fecha);

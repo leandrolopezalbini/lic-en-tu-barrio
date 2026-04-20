@@ -15,11 +15,10 @@ function normalizeDNI(dni) {
 }
 
 function findColumnByName(sheet, columnName) {
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[COL_INS.ID];
   const index = headers.indexOf(columnName);
   return index !== -1 ? index + 1 : 1; // Retorna la columna 1 si no la encuentra para evitar error
 }
-
 
 function generarPDFAlumnosFiltrados(listaAlumnos) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -180,4 +179,79 @@ function testCertificadoPDF() {
     console.error("🚨 ERROR DE CÓDIGO: " + e.message);
   }
   
+}
+
+function testFull() {
+  console.log("COL_INS:", COL_INS.DNI);
+  console.log("COL_PER:", COL_PER.DNI);
+}
+
+function testGlobals() {
+  console.log(COL_INS.DNI);
+  console.log(COL_BAR.INST);
+  console.log(COL_PER.DNI);
+}
+
+function testMesaReal() {
+  Logger.log(obtenerDatosMesa("TU_DNI_REAL"));
+}
+
+function testPreguntas() {
+  const data = getSheet(SHEETS.PREGUNTAS).getDataRange().getValues();
+  Logger.log(data.length);
+}
+
+// 20.4.26 - Testeo de funciones clave del sistema para asegurar integridad y permisos.
+function testSistemaCompleto() {
+  Logger.log("===== TEST SISTEMA =====");
+
+  // 1. PERSONAL
+  try {
+    const personal = getSheet(SHEETS.PERSONAL).getDataRange().getValues();
+    Logger.log("PERSONAL OK: " + personal.length + " filas");
+  } catch(e) {
+    Logger.log("ERROR PERSONAL: " + e);
+  }
+
+  // 2. LOGIN
+  try {
+    const testLogin = loginPersonal("12345678", "12345"); // ⚠ poné un usuario real
+    Logger.log("LOGIN: " + JSON.stringify(testLogin));
+  } catch(e) {
+    Logger.log("ERROR LOGIN: " + e);
+  }
+
+  // 3. INSCRIPCIONES
+  try {
+    const insc = getSheet(SHEETS.INSCRIPCIONES).getDataRange().getValues();
+    Logger.log("INSCRIPCIONES OK: " + insc.length);
+  } catch(e) {
+    Logger.log("ERROR INSCRIPCIONES: " + e);
+  }
+
+  // 4. SEDES
+  try {
+    const sedes = obtenerOpcionesCursada();
+    Logger.log("SEDES: " + JSON.stringify(sedes.slice(0,2)));
+  } catch(e) {
+    Logger.log("ERROR SEDES: " + e);
+  }
+
+  // 5. DATOS MESA
+  try {
+    const mesa = obtenerDatosMesa("12345678"); // ⚠ DNI real
+    Logger.log("MESA: " + JSON.stringify(mesa));
+  } catch(e) {
+    Logger.log("ERROR MESA: " + e);
+  }
+
+  // 6. PREGUNTAS
+  try {
+    const preg = getSheet(SHEETS.PREGUNTAS).getDataRange().getValues();
+    Logger.log("PREGUNTAS: " + preg.length);
+  } catch(e) {
+    Logger.log("ERROR PREGUNTAS: " + e);
+  }
+
+  Logger.log("===== FIN TEST =====");
 }

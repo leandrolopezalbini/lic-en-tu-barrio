@@ -74,4 +74,8 @@ function manejarCancelacion(dni, step, instData) {
   }
 }
 
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
 function getScriptUrl() { return ScriptApp.getService().getUrl(); }

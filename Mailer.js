@@ -10,10 +10,10 @@ function enviarMailConfirmacion(email, datos, info) {
   if (!email || !email.includes('@')) return;
 
   // 1. ASIGNACIÓN DE VARIABLES (Mapeo de tu objeto 'datos')
-  const nombre = datos.nombre || datos[COL.NOM] || "Aspirante";
-  const categoria = datos.cat || datos.categoria || datos[COL.CAT] || "No especificada"; 
-  const institucion = datos.inst || datos.institucion || datos[COL.INST] || "Sede Municipal"; 
-  const dniAlu = datos.dni || datos[COL.DNI] || "0"; // AQUÍ SE DEFINE PARA EVITAR EL ERROR
+  const nombre = datos.nombre || datos[COL_INS.NOMBRE] || "Aspirante";
+  const categoria = datos.cat || datos.categoria || datos[COL_INS.CATEGORIA] || "No especificada"; 
+  const institucion = datos.inst || datos.institucion || datos[COL_BAR.INST] || "Sede Municipal"; 
+  const dniAlu = datos.dni || datos[COL_INS.DNI] || "0"; // AQUÍ SE DEFINE PARA EVITAR EL ERROR
 
   // 2. GENERACIÓN DE URL
   const urlApp = ScriptApp.getService().getUrl();
@@ -72,10 +72,10 @@ function procesarRecordatoriosDiarios() {
 
   for (let i = 1; i < data.length; i++) {
     const fila = data[i];
-    const email = fila[COL.EMAIL]; // Usa tus constantes para evitar errores
-    const nombre = fila[COL.NOM];
-    const sede = fila[COL.INST];
-    const barrio = fila[COL.BARRIO] || ""; // Asegúrate de tener esta col definida
+    const email = fila[COL_INS.EMAIL]; // Usa tus constantes para evitar errores
+    const nombre = fila[COL_INS.NOMBRE];
+    const sede = fila[COL_BAR.INST];
+    const barrio = fila[COL_INS.BARRIO] || ""; // Asegúrate de tener esta col definida
 
     // Validación de email: Si no hay @ o es muy corto, saltar
     if (!email || email.toString().indexOf('@') === -1) continue;

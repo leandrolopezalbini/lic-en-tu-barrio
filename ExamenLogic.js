@@ -92,10 +92,10 @@ function finalizarExamen(dni, nota, respuestasJson, huboFalloExcluyente) {
 
     // 🔍 Buscar alumno
     for (let i = data.length - 1; i >= 1; i--) {
-      if (data[i][COL.DNI].toString().replace(/\D/g, "") === dStr) {
+      if (data[i][COL_INS.DNI].toString().replace(/\D/g, "") === dStr) {
         filaIndex = i + 1;
-        nombreCompleto = data[i][COL.NOM] + " " + data[i][COL.APE];
-        emailAlumno = data[i][COL.EMAIL];
+        nombreCompleto = data[i][COL_INS.NOMBRE] + " " + data[i][COL_INS.APELLIDO];
+        emailAlumno = data[i][COL_INS.EMAIL];
         alumnoEncontrado = true;
         break;
       }
@@ -118,14 +118,14 @@ function finalizarExamen(dni, nota, respuestasJson, huboFalloExcluyente) {
     const respuestasFinal = JSON.stringify(respuestasEnriquecidas);
 
     // 🔴 IMPORTANTE: NO SOBREESCRIBIR NOTA SI YA EXISTE
-    const notaActual = data[filaIndex - 1][COL.NOTA];
+    const notaActual = data[filaIndex - 1][COL_INS.NOTA];
 
     if (!notaActual || notaActual === "") {
-      sheet.getRange(filaIndex, COL.NOTA + 1).setValue(nota);
+      sheet.getRange(filaIndex, COL_INS.NOTA + 1).setValue(nota);
     }
 
     // ✔ SOLO CAMBIAMOS ESTADO
-    sheet.getRange(filaIndex, COL.ESTADO + 1).setValue("FINALIZADO");
+    sheet.getRange(filaIndex, COL_INS.ESTADO_TRAMITE + 1).setValue("FINALIZADO");
 
     SpreadsheetApp.flush();
 
@@ -177,12 +177,12 @@ function actualizarNotaEnBD(dni, nota, detalle) {
   const dStr = dni.toString().replace(/\D/g, "");
 
   for (let i = 1; i < data.length; i++) {
-    if (data[i][COL.DNI].toString().replace(/\D/g, "") === dStr) {
+    if (data[i][COL_INS.DNI].toString().replace(/\D/g, "") === dStr) {
       // Guardamos la nota numérica
-      sheet.getRange(i + 1, COL.NOTA + 1).setValue(nota);
+      sheet.getRange(i + 1, COL_INS.NOTA + 1).setValue(nota);
       
       // Opcional: Guardar el JSON del detalle en una columna oculta para auditoría
-      // sheet.getRange(i + 1, COL.ESTADO + 1).setValue("RENDIDO");
+      // sheet.getRange(i + 1, COL_INS.ESTADO_TRAMITE + 1).setValue("RENDIDO");
       
       registrarAccion("SISTEMA", "EXAMEN FINALIZADO", `DNI: ${dStr} - Nota: ${nota}`);
       break;
@@ -197,12 +197,12 @@ function habilitarExamen(dniAlumno, dniOperador) {
     const dAlu = dniAlumno.toString().replace(/\D/g, "");
 
     for (let i = 1; i < data.length; i++) {
-      if (data[i][COL.DNI].toString().replace(/\D/g, "") === dAlu) {
+      if (data[i][COL_INS.DNI].toString().replace(/\D/g, "") === dAlu) {
         
-        // Escribimos HABILITADO en la Columna P (COL.ESTADO)
-        sheet.getRange(i + 1, COL.ESTADO + 1).setValue("HABILITADO");
+        // Escribimos HABILITADO en la Columna P (COL_INS.ESTADO_TRAMITE)
+        sheet.getRange(i + 1, COL_INS.ESTADO_TRAMITE + 1).setValue("HABILITADO");
         
-        // NO LIMPIAMOS COL.NOTA: Así mantenemos el registro de la nota anterior 
+        // NO LIMPIAMOS COL_INS.NOTA: Así mantenemos el registro de la nota anterior 
         // hasta que el sistema la sobreescriba al finalizar el nuevo examen.
 
         registrarAccion(dniOperador, "HABILITÓ EXAMEN", `DNI Alumno: ${dAlu}`);
@@ -224,17 +224,17 @@ function validarAccesoExamen(dni) {
     // 1. Buscar al alumno para saber su fecha de examen
     const hojaInscritos = ss.getSheetByName(SHEETS.INSCRIPCIONES);
     const datosInscritos = hojaInscritos.getDataRange().getValues();
-    const alumno = datosInscritos.find(fila => fila[COL.DNI].toString().replace(/\D/g, "") === dniLimpio);
+    const alumno = datosInscritos.find(fila => fila[COL_INS.DNI].toString().replace(/\D/g, "") === dniLimpio);
 
     if (!alumno) return { habilitado: false, mensaje: "DNI no encontrado en el sistema." };
     
     // 2. Verificar Asistencia (Opcional, pero recomendado)
-    if (alumno[13] < 2) { // Columna N es Asistencia (índice 13)
+    if (alumno[COL_INS.ASISTENCIA] < 2) { // Columna N es Asistencia
        return { habilitado: false, mensaje: "No posees la asistencia mínima requerida para rendir." };
     }
 
     // 3. Obtener la fecha de examen del alumno (Columna M - índice 12)
-    const fechaExamenAlumno = alumno[12]; 
+    const fechaExamenAlumno = alumno[COL_INS.BARRIOF_EXAMEN]; 
     if (!(fechaExamenAlumno instanceof Date)) {
       return { habilitado: false, mensaje: "No tienes una fecha de examen asignada aún." };
     }
@@ -262,7 +262,7 @@ function validarAccesoExamen(dni) {
     return {
       habilitado: estaEnRango,
       mensaje: estaEnRango ? "OK" : `El examen estará disponible el ${Utilities.formatDate(fechaExamenAlumno, "GMT-3", "dd/MM")} de ${horaInicioStr} a ${horaFinStr} hs.`,
-      alumno: { nombre: alumno[1], apellido: alumno[2] }
+      alumno: { nombre: alumno[COL_INS.NOMBREBRE], apellido: alumno[COL_INS.APELLIDOLLIDO] }
     };
 
   } catch (e) {
@@ -274,139 +274,30 @@ function obtenerTodasLasPreguntas() {
   try {
     const sheet = getSheet(SHEETS.PREGUNTAS);
     const data = sheet.getDataRange().getValues();
-    
-    let preguntasRaw = data.slice(1).filter(r => r[0] && r[1]);
 
-    const procesarTexto = (textoOriginal) => {
-      if (!textoOriginal) return '';
-      const texto = textoOriginal.toString();
+    const preguntasRaw = data.slice(1).filter(r =>
+      r[COL_PREG.PREGUNTA] &&
+      r[COL_PREG.OPC1]
+    );
 
-      if (texto.includes('obtenerUrlImagen')) {
-        const idMatch = texto.match(/obtenerUrlImagen\(['"]([^'"\)]+)['"]\)/);
+    Logger.log("Preguntas RAW: " + preguntasRaw.length);
 
-        if (idMatch && idMatch[1]) {
-          const idImagen = idMatch[1];
-          const urlReal = `https://drive.google.com/thumbnail?id=${idImagen}&sz=w500`;
-
-          const soloTexto = texto
-            .replace(/<img[^>]+>/g, "")
-            .replace(/obtenerUrlImagen\(['"][^'"]+['"]\)/g, "")
-            .replace(/["'=]/g, "")
-            .trim();
-
-          return `
-            <div style="text-align:center;">
-              <img src="${urlReal}" style="width:100%; max-width:280px; border-radius:10px; margin-bottom:10px;">
-              <p>${soloTexto}</p>
-            </div>
-          `;
-        }
-      }
-
-      return texto;
-    };
-
-    return preguntasRaw.map((r, i) => {
-
-      const valExcl = (r[7] || '').toString().trim().toUpperCase();
-
-      return {
-        id: i + 1,
-        texto: procesarTexto(r[0]),
-        opciones: {
-          a: procesarTexto(r[1]),
-          b: procesarTexto(r[2]),
-          c: procesarTexto(r[3])
-        },
-        correcta: (r[4] || '').toString().toLowerCase().trim(),
-        puntos: parseFloat(r[5]) || 1,
-        tiempo: parseInt(r[6]) || 30,
-
-        excluyente: ["SI", "TRUE", "1", "X"].includes(valExcl)
-      };
-    });
+    return preguntasRaw.map((r, i) => ({
+      id: i + 1,
+      texto: r[COL_PREG.PREGUNTA],
+      opciones: {
+        a: r[COL_PREG.OPC1],
+        b: r[COL_PREG.OPC2],
+        c: r[COL_PREG.OPC3]
+      },
+      correcta: r[COL_PREG.CORRECTA].toString().toLowerCase().trim(),
+      puntos: 1,
+      tiempo: 30,
+      excluyente: false
+    }));
 
   } catch (e) {
-    console.error("Error al obtener preguntas:", e);
+    Logger.log("ERROR preguntas: " + e);
     return [];
   }
-function obtenerTodasLasPreguntas() {
-  try {
-    const sheet = getSheet(SHEETS.PREGUNTAS);
-    const data = sheet.getDataRange().getValues();
-
-    // 🔍 Filtrar filas válidas
-    let preguntasRaw = data.slice(1).filter(r => r[0] && r[1]);
-
-    // 🧪 DEBUG (clave para detectar problemas)
-    Logger.log("Cantidad preguntas RAW: " + preguntasRaw.length);
-
-    const procesarTexto = (textoOriginal) => {
-      if (!textoOriginal) return '';
-      const texto = textoOriginal.toString();
-
-      // 🖼️ Soporte imágenes desde Drive
-      if (texto.includes('obtenerUrlImagen')) {
-        const idMatch = texto.match(/obtenerUrlImagen\(['"]([^'"\)]+)['"]\)/);
-
-        if (idMatch && idMatch[1]) {
-          const idImagen = idMatch[1];
-          const urlReal = `https://drive.google.com/thumbnail?id=${idImagen}&sz=w500`;
-
-          const soloTexto = texto
-            .replace(/<img[^>]+>/g, "")
-            .replace(/obtenerUrlImagen\(['"][^'"]+['"]\)/g, "")
-            .replace(/["'=]/g, "")
-            .trim();
-
-          return `
-            <div style="text-align:center;">
-              <img src="${urlReal}" style="width:100%; max-width:280px; border-radius:10px; margin-bottom:10px;">
-              <p>${soloTexto}</p>
-            </div>
-          `;
-        }
-      }
-
-      return texto;
-    };
-
-    const preguntas = preguntasRaw.map((r, i) => {
-
-      // 🔴 NORMALIZACIÓN SEGURA (sin normalize)
-      const valExcl = (r[7] || '')
-        .toString()
-        .replace(/[áàä]/gi,"a")
-        .replace(/[éèë]/gi,"e")
-        .replace(/[íìï]/gi,"i")
-        .replace(/[óòö]/gi,"o")
-        .replace(/[úùü]/gi,"u")
-        .trim()
-        .toUpperCase();
-
-      return {
-        id: i + 1,
-        texto: procesarTexto(r[0]),
-        opciones: {
-          a: procesarTexto(r[1]),
-          b: procesarTexto(r[2]),
-          c: procesarTexto(r[3])
-        },
-        correcta: (r[4] || '').toString().toLowerCase().trim(),
-        puntos: parseFloat(r[5]) || 1,
-        tiempo: parseInt(r[6]) || 30,
-
-        // 🔥 EXCLUYENTE ROBUSTO
-        excluyente: ["SI", "TRUE", "1", "X"].includes(valExcl)
-      };
-    });
-
-    Logger.log("Preguntas procesadas OK: " + preguntas.length);
-
-    return preguntas;
-
-  } catch (e) {
-    Logger.log("ERROR obtenerTodasLasPreguntas: " + e);
-    throw e; // 🔥 IMPORTANTE para que el frontend vea el error
-  }
-  }}
+}

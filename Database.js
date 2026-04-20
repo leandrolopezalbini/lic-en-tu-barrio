@@ -1,47 +1,4 @@
-// DATABASE.GS 
-
-const SHEETS = {
-  INSCRIPCIONES: "Inscripciones",
-  BARRIOS: "BarriosInstituciones",
-  PERSONAL: "Personal",
-  LOGS: "HistorialAccesos",
-  ASISTENCIA: "HistorialAsistencia",
-  PREGUNTAS: "PreguntasExamen",
-  RESPUESTAS: "RespuestasExamen",
-  CONFIG: "Configuracion"
-};
-
-const COL_INS = {
-  ID: 0,
-  NOM: 1,
-  APE: 2,
-  DNI: 3,
-  FNAC: 4,
-  TEL: 5,
-  EMAIL: 6,
-  CAT: 7,
-  BARRIO: 8,
-  INST: 9,
-  F1: 10,
-  F2: 11,
-  F_EX: 12,
-  ASIST: 13,
-  NOTA: 14,
-  ESTADO: 15
-};
-
-const COL_BAR = {
-  BARRIO: 0,
-  INST: 1,
-  DIR: 2,
-  CUPO: 3,
-  F1: 4,
-  F2: 5,
-  F_EX: 6,
-  ESTADO: 7,
-  ACTUALES: 8,
-  HORARIO: 9
-};
+// Database.js
 
 // --- 1. NÚCLEO Y AUDITORÍA ---
 
@@ -66,8 +23,8 @@ function obtenerLogs() {
     const data = getSheet(SHEETS.LOGS).getDataRange().getValues();
     if (data.length <= 1) return [];
     return data.slice(1).reverse().slice(0, 50).map(f => ({
-      fecha: Utilities.formatDate(new Date(f[0]), "GMT-3", "dd/MM/yyyy HH:mm"),
-      dni: f[1], operador: f[2], accion: f[3], detalle: f[4]
+      fecha: Utilities.formatDate(new Date(f[COL_LOGS.FECHA]), "GMT-3", "dd/MM/yyyy HH:mm"),
+      dni: f[COL_LOGS.DNI], operador: f[COL_LOGS.OPERADOR], accion: f[COL_LOGS.ACCION], detalle: f[COL_LOGS.DETALLE]
     }));
   } catch (e) { return []; }
 }
@@ -81,23 +38,22 @@ function buscarAlumno(query) {
     
     return data.slice(1)
       .filter(f => {
-        const dni = f[COL.DNI] ? f[COL.DNI].toString() : "";
-        const ape = f[COL.APE] ? f[COL.APE].toString().toLowerCase() : "";
+        const dni = f[COL_INS.DNI] ? f[COL_INS.DNI].toString() : "";
+        const ape = f[COL_INS.APELLIDO] ? f[COL_INS.APELLIDO].toString().toLowerCase() : "";
         return dni.includes(q) || ape.includes(q);
       })
       .slice(0, 10)
       .map(f => ({
-        nombre: f[COL.NOM], apellido: f[COL.APE], dni: f[COL.DNI],
-        institucion: f[COL.INST] || "Sin Sede",
-        asistencia: f[COL.ASIST], nota: f[COL.NOTA], estado: f[COL.ESTADO],
-        email: f[COL.EMAIL], categoria: f[COL.CAT], barrio: f[COL.BARRIO],
-        fechaNac: f[COL.FNAC] instanceof Date ? f[COL.FNAC].toISOString().split('T')[0] : f[COL.FNAC]
+        nombre: f[COL_INS.NOMBRE], apellido: f[COL_INS.APELLIDO], dni: f[COL_INS.DNI],
+        institucion: f[COL_BAR.INST] || "Sin Sede",
+        asistencia: f[COL_INS.ASISTENCIA], nota: f[COL_INS.NOTA], estado: f[COL_INS.ESTADO_TRAMITE],
+        email: f[COL_INS.EMAIL], categoria: f[COL_INS.CATEGORIA], barrio: f[COL_INS.BARRIO],
+        fechaNac: f[COL_INS.FNAC] instanceof Date ? f[COL_INS.FNAC].toISOString().split('T')[COL_INS.FECHA_NAC] : f[COL_INS.FNAC]
       }));
   } catch (e) { return []; }
 }
 
 function obtenerDatosMesa(dni) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheetInsc = getSheet(SHEETS.INSCRIPCIONES);
   const data = sheetInsc.getDataRange().getValues();
   const d = dni.toString().replace(/\D/g, "");
@@ -105,25 +61,24 @@ function obtenerDatosMesa(dni) {
   let alumno = null;
 
   for (let i = data.length - 1; i >= 1; i--) {
-    if (data[i][COL.DNI].toString().replace(/\D/g, "") === d) {
-      // Mapeo de datos basado en tus constantes COL
+
+    const fila = data[i];
+
+    if (!fila || !fila[COL_INS.DNI]) continue;
+
+    if (fila[COL_INS.DNI].toString().replace(/\D/g, "") === d) {
       alumno = {
-        nombre: data[i][COL.NOM], 
-        apellido: data[i][COL.APE], 
-        dni: data[i][COL.DNI],
-        email: data[i][COL.EMAIL], 
-        categoria: data[i][COL.CAT], 
-        institucion: data[i][COL.INST],
-        asistencia: parseFloat(data[i][COL.ASIST]) || 0, // Columna 13 (N)
-        
-        // IMPORTANTE: Aquí definimos qué leer para validar el acceso
-        // Usamos COL.ESTADO porque ahí es donde escribirás "HABILITADO"
-        estadoExamen: data[i][COL.ESTADO], // Columna 15 (P)
-        
-        notaRegistrada: data[i][COL.NOTA], // Columna 14 (O) por si ya rindió
-        
-        fechaExamen: data[i][COL.F_EX] instanceof Date 
-          ? Utilities.formatDate(data[i][COL.F_EX], "GMT-3", "yyyy-MM-dd") 
+        nombre: fila[COL_INS.NOMBRE],
+        apellido: fila[COL_INS.APELLIDO],
+        dni: fila[COL_INS.DNI],
+        email: fila[COL_INS.EMAIL],
+        categoria: fila[COL_INS.CATEGORIA],
+        institucion: fila[COL_INS.INSTITUCION],
+        asistencia: parseFloat(fila[COL_INS.ASISTENCIA]) || 0,
+        estadoExamen: fila[COL_INS.ESTADO_TRAMITE],
+        notaRegistrada: fila[COL_INS.NOTA],
+        fechaExamen: fila[COL_INS.FECHA_EXAMEN] instanceof Date 
+          ? Utilities.formatDate(fila[COL_INS.FECHA_EXAMEN], "GMT-3", "yyyy-MM-dd") 
           : ""
       };
       break;
@@ -142,10 +97,10 @@ function obtenerDatosEdicionCompleta(dni) {
     if (!resMesa.success) return resMesa;
 
     // 2. Obtenemos la lista de sedes de la hoja BARRIOS (o SEDES)
-    // Asumiendo que la Columna B (índice 1) tiene el nombre de la Institución
     const dataSedes = getSheet(SHEETS.BARRIOS).getDataRange().getValues();
     const sedesUnicas = [...new Set(dataSedes.slice(1)
-      .map(fila => fila[1]) // Columna B
+      .map(fila => fila[COL_BAR.INST])
+      
       .filter(nombre => nombre && nombre !== ""))];
 
     return { 
@@ -165,12 +120,12 @@ function registrarAsistenciaFila(dniAlumno, presente, dniOperador) {
   const dAlu = dniAlumno.toString().replace(/\D/g, "");
 
   for (let i = 1; i < data.length; i++) {
-    if (data[i][COL.DNI].toString().replace(/\D/g, "") === dAlu) {
-      let actual = parseFloat(data[i][COL.ASIST]) || 0;
+    if (data[i][COL_INS.DNI].toString().replace(/\D/g, "") === dAlu) {
+      let actual = parseFloat(data[i][COL_INS.ASISTENCIA]) || 0;
       const incremento = 100 / (typeof TOTAL_CLASES !== 'undefined' ? TOTAL_CLASES : 2);
       let nuevo = presente ? Math.min(100, actual + incremento) : Math.max(0, actual - incremento);
       
-      sheet.getRange(i + 1, COL.ASIST + 1).setValue(nuevo);
+      sheet.getRange(i + 1, COL_INS.ASISTENCIA + 1).setValue(nuevo);
       registrarAccion(dniOperador, presente ? "PRESENTE" : "QUITÓ ASISTENCIA", `DNI Alumno: ${dAlu}`);
       if (presente) getSheet(SHEETS.ASISTENCIA).appendRow([new Date(), dAlu, dniOperador]);
       return { success: true, nuevoValor: nuevo };
@@ -179,42 +134,38 @@ function registrarAsistenciaFila(dniAlumno, presente, dniOperador) {
   return { success: false, message: "Alumno no encontrado" };
 }
 
-function obtenerAlumnosPorFiltro(sede, fechaSeleccionada) {
+function obtenerAlumnosPorFiltro(sede) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     
-    // 1. Obtener la fecha de examen configurada para esa sede (Hoja BARRIOS)
+    // 1. Buscar sede
     const sheetBarrios = ss.getSheetByName(SHEETS.BARRIOS);
     const dataBarrios = sheetBarrios.getDataRange().getValues();
-    // Col B (1) es Institución, Col G (6) es Fecha Examen
-    const infoSede = dataBarrios.find(fila => fila[1] === sede);
-    
-    // Formateamos la fecha del Excel (Date) a string YYYY-MM-DD para comparar en el HTML
+
+    const infoSede = dataBarrios.find(fila => fila[COL_BAR.INST] === sede);
+
     let fechaExamenSede = "";
-    if (infoSede && infoSede[6]) {
-      const d = new Date(infoSede[6]);
-      fechaExamenSede = d.toISOString().split('T')[0];
+    if (infoSede && infoSede[COL_BAR.F_EX]) {
+      const d = new Date(infoSede[COL_BAR.F_EX]);
+      fechaExamenSede = Utilities.formatDate(d, "GMT-3", "yyyy-MM-dd");
     }
 
-    // 2. Obtener los alumnos (Hoja INSCRIPCIONES)
+    // 2. Alumnos
     const sheetInsc = ss.getSheetByName(SHEETS.INSCRIPCIONES);
     const dataInsc = sheetInsc.getDataRange().getValues();
-    dataInsc.shift(); // Quitar cabecera
+    dataInsc.shift();
 
     const alumnosFiltrados = dataInsc
-      .filter(fila => fila[9] === sede) // Col J (9): Institución/Sede
-      .map(fila => {
-        return {
-          dni: fila[3],           // Col D
-          nombre: fila[1],        // Col B
-          apellido: fila[2],      // Col C
-          asistencia: fila[13],   // Col N (Porcentaje de asistencia)
-          nota: fila[14],         // Col O (Estado/Nota de examen)
-          finalizado: fila[15] === "FINALIZADO" // Col P
-        };
-      });
+      .filter(fila => fila[COL_INS.INSTITUCION] === sede)
+      .map(fila => ({
+        dni: fila[COL_INS.DNI],
+        nombre: fila[COL_INS.NOMBRE],
+        apellido: fila[COL_INS.APELLIDO],
+        asistencia: fila[COL_INS.ASISTENCIA],
+        nota: fila[COL_INS.NOTA],
+        estado: fila[COL_INS.ESTADO_TRAMITE]
+      }));
 
-    // 3. Devolvemos el objeto tal cual lo espera el SuccessHandler del HTML
     return {
       alumnos: alumnosFiltrados,
       fechaExamenSede: fechaExamenSede
@@ -225,26 +176,34 @@ function obtenerAlumnosPorFiltro(sede, fechaSeleccionada) {
     return { alumnos: [], fechaExamenSede: "", error: e.toString() };
   }
 }
+
 // --- 3. PROCESO DE INSCRIPCIÓN ---
 
 function obtenerOpcionesCursada() {
   const sedes = getSheet(SHEETS.BARRIOS).getDataRange().getValues();
   const inscripciones = getSheet(SHEETS.INSCRIPCIONES).getDataRange().getValues();
+
   const conteo = inscripciones.slice(1).reduce((acc, f) => {
-    acc[f[COL.INST]] = (acc[f[COL.INST]] || 0) + 1;
+    const sede = f[COL_INS.INSTITUCION];
+    acc[sede] = (acc[sede] || 0) + 1;
     return acc;
   }, {});
 
-  return sedes.slice(1).filter(r => r[1]).map(r => {
-    const inscritos = conteo[r[1]] || 0;
-    const cupoMax = parseInt(r[3]) || 0;
-    const agotado = (cupoMax > 0 && inscritos >= cupoMax);
-    return {
-      barrio: r[0], institucion: r[1],
-      texto: `${r[0]} - ${r[1]} (${inscritos}/${cupoMax || '∞'})${agotado ? ' [AGOTADO]' : ''}`,
-      deshabilitado: agotado
-    };
-  });
+  return sedes.slice(1)
+    .filter(r => r[COL_BAR.INST])
+    .map(r => {
+      const sedeNombre = r[COL_BAR.INST];
+      const inscritos = conteo[sedeNombre] || 0;
+      const cupoMax = parseInt(r[COL_BAR.CUPO]) || 0;
+      const agotado = (cupoMax > 0 && inscritos >= cupoMax);
+
+      return {
+        barrio: r[COL_BAR.BARRIO],
+        institucion: sedeNombre,
+        texto: `${r[COL_BAR.BARRIO]} - ${sedeNombre} (${inscritos}/${cupoMax || '∞'})${agotado ? ' [AGOTADO]' : ''}`,
+        deshabilitado: agotado
+      };
+    });
 }
 
 function procesarNuevaInscripcion(datos) {
@@ -254,15 +213,18 @@ function procesarNuevaInscripcion(datos) {
     const dniLimpio = datos.dni.toString().replace(/\D/g, "");
 
     // 1. VALIDACIÓN DE DUPLICADOS
-    const yaExiste = data.some(fila => fila[COL.DNI].toString().replace(/\D/g, "") === dniLimpio);
+    const yaExiste = data.some(fila => 
+      fila[COL_INS.DNI] && 
+      fila[COL_INS.DNI].toString().replace(/\D/g, "") === dniLimpio
+    );
     if (yaExiste) {
       return { success: false, message: "Ya existe una inscripción activa para el DNI " + dniLimpio };
     }
 
     // 2. BUSCAR INFO DE SEDE
     const sedes = getSheet(SHEETS.BARRIOS).getDataRange().getValues();
-    let infoSede = sedes.find(s => s[1] === datos.inst) || [];
-    const barrioEncontrado = infoSede[0] || "No especificado";
+    let infoSede = sedes.find(s => s[COL_BAR.INST] === datos.inst) || [];
+    const barrioEncontrado = infoSede[COL_BAR.BARRIO] || "No especificado";
 
     // 3. ARMAR FILA
     const fila = [
@@ -276,9 +238,9 @@ function procesarNuevaInscripcion(datos) {
       datos.cat,
       barrioEncontrado,
       datos.inst,
-      infoSede[4] || "",
-      infoSede[5] || "",
-      infoSede[6] || "",
+      infoSede[COL_BAR.F1] || "",
+      infoSede[COL_BAR.F2] || "",
+      infoSede[COL_BAR.F_EX] || "",
       0,
       "",
       "INSCRIPTO"
@@ -297,9 +259,9 @@ function procesarNuevaInscripcion(datos) {
     if (datos.email && datos.email.includes("@")) {
       try {
         const fechasObj = {
-          fecha1: infoSede[4],
-          fecha2: infoSede[5],
-          fechaExamen: infoSede[6]
+          fecha1: infoSede[COL_BAR.F1] || "",
+          fecha2: infoSede[COL_BAR.F2] || "",
+          fechaExamen: infoSede[COL_BAR.F_EX] || ""
         };
 
         enviarMailConfirmacion(datos.email, datos, fechasObj);
@@ -323,8 +285,8 @@ function cancelarInscripcion(dni, dniOperador = "SISTEMA/AUTO") {
     const dStr = dni.toString().replace(/\D/g, "");
 
     for (let i = 1; i < data.length; i++) {
-      // Usamos COL.DNI para ser fieles a tu estructura
-      if (data[i][COL.DNI].toString().replace(/\D/g, "") === dStr) {
+      // Usamos COL_INS.DNI para ser fieles a tu estructura
+      if (data[i][COL_INS.DNI].toString().replace(/\D/g, "") === dStr) {
         sheet.deleteRow(i + 1);
         registrarAccion(dniOperador, "ELIMINACIÓN/CANCELACIÓN", `DNI: ${dStr}`);
         return "Inscripción cancelada exitosamente.";
@@ -344,7 +306,7 @@ function obtenerSedesUnicas() {
     const sheet = getSheet(SHEETS.BARRIOS);
     const data = sheet.getDataRange().getValues();
     // Quitamos el encabezado y extraemos la columna de Institución (índice 1)
-    const sedes = data.slice(1).map(fila => fila[1]);
+    const sedes = data.slice(1).map(fila => fila[COL_BAR.BARRIO]);
     
     // Filtramos para que no haya repetidos y quitamos vacíos
     return [...new Set(sedes)].filter(s => s);
@@ -488,14 +450,14 @@ function marcarAsistencia(dniAlumno, esSuma, dniOperador) {
     const dAlu = dniAlumno.toString().replace(/\D/g, "");
 
     for (let i = 1; i < data.length; i++) {
-      if (data[i][COL.DNI].toString().replace(/\D/g, "") === dAlu) {
-        let actual = parseFloat(data[i][COL.ASIST]) || 0;
+      if (data[i][COL_INS.DNI].toString().replace(/\D/g, "") === dAlu) {
+        let actual = parseFloat(data[i][COL_INS.ASISTENCIA]) || 0;
         
         // Lógica de incremento (50% por clase para 2 clases totales)
         const incremento = 50; 
         let nuevo = esSuma ? Math.min(100, actual + incremento) : Math.max(0, actual - incremento);
         
-        sheet.getRange(i + 1, COL.ASIST + 1).setValue(nuevo);
+        sheet.getRange(i + 1, COL_INS.ASISTENCIA + 1).setValue(nuevo);
         
         // Registro de auditoría
         registrarAccion(dniOperador, esSuma ? "PRESENTE" : "QUITÓ ASISTENCIA", `DNI Alumno: ${dAlu}`);
@@ -516,7 +478,7 @@ function marcarAsistencia(dniAlumno, esSuma, dniOperador) {
 
 function guardarPreguntaServidor(datos, dniOp) {
   const sheet = getSheet(SHEETS.PREGUNTAS);
-  const fila = [datos.pregunta, datos.opciones[0], datos.opciones[1], datos.opciones[2], datos.correcta, datos.tiempo, 10, datos.excluyente];
+  const fila = [datos.pregunta, datos.opciones[COL_PREG.OPC1], datos.opciones[COL_PREG.OPC2], datos.opciones[COL_PREG.OPC3], datos.correcta, datos.tiempo, 10, datos.excluyente];
   
   if (datos.id) {
     sheet.getRange(datos.id, 1, 1, 8).setValues([fila]);
@@ -548,14 +510,13 @@ function crearNuevoPersonal(datos) {
     const dniNuevo = datos.dni.toString().replace(/\D/g, "");
 
     // 2. Validar duplicados en la columna C (índice 2)
-    const existe = data.some(fila => fila[2].toString().replace(/\D/g, "") === dniNuevo);
+    const existe = data.some(fila => fila[COL_PER.DNI].toString().replace(/\D/g, "") === dniNuevo);
     
     if (existe) {
       return { success: false, message: "El DNI " + dniNuevo + " ya está registrado en el sistema." };
     }
 
     // 3. Preparar la fila con la clave por defecto "12345"
-    // Col A: Nombre | B: Apellido | C: DNI | D: Perfil | E: Email | F: Tel | G: Pass | H: RequiereCambio
     const nuevaFila = [
       datos.nombre, 
       datos.apellido, 
@@ -578,70 +539,45 @@ function crearNuevoPersonal(datos) {
 }
 
 function loginPersonal(dni, password) {
-  const data = getSheet(SHEETS.PERSONAL).getDataRange().getValues();
-  const d = dni.toString().replace(/\D/g, "");
-  
-  for (let i = 1; i < data.length; i++) {
-    // Si coinciden DNI y Password
-    if (data[i][2].toString().replace(/\D/g, "") === d && data[i][6].toString() === password) {
-      return { 
-        success: true, 
-        perfil: data[i][3], 
-        requiereCambio: (data[i][7] === "SI"), // <--- ESTO ES CLAVE (Columna H)
-        nombre: data[i][0]
-      };
+  try {
+    const data = getSheet(SHEETS.PERSONAL).getDataRange().getValues();
+    const d = dni.toString().replace(/\D/g, "");
+    
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+
+      // 🛑 evitar undefined
+      if (!row[COL_PER.DNI] || !row[COL_PER.PASSWORD]) continue;
+
+      const dniFila = row[COL_PER.DNI].toString().replace(/\D/g, "");
+      const passFila = row[COL_PER.PASSWORD].toString();
+
+      if (dniFila === d && passFila === password) {
+        Logger.log("LOGIN OK → PERFIL: " + row[COL_PER.PERFIL]);
+
+        return { 
+          success: true, 
+          perfil: row[COL_PER.PERFIL], 
+          requiereCambio: (row[COL_PER.REQUIERE_CAMBIO] === "SI"),
+          nombre: row[COL_PER.NOMBRE],
+          apellido: row[COL_PER.APELLIDO]
+        };
+      }
     }
+
+    return { success: false, message: "DNI o Contraseña incorrectos" };
+
+  } catch (e) {
+    return { success: false, message: e.toString() };
   }
-  return { success: false, message: "DNI o Contraseña incorrectos" };
-}
-
-function actualizarPasswordPersonal(dni, nuevaPass) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEETS.PERSONAL);
-  const data = sheet.getDataRange().getValues();
-  const d = dni.toString().replace(/\D/g, "");
-
-  // VALIDACIÓN DE SEGURIDAD LADO SERVIDOR
-  if (nuevaPass === "12345" || nuevaPass.length < 4) {
-    return { success: false, message: "La clave es muy débil o es la de defecto." };
-  }
-
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][2].toString().replace(/\D/g, "") === d) {
-      // Escribimos en la fila i+1
-      sheet.getRange(i + 1, 7).setValue(nuevaPass); // Columna G (Password)
-      sheet.getRange(i + 1, 8).setValue("NO");      // Columna H (RequiereCambio)
-      
-      registrarAccion(d, "ACTUALIZÓ SU PASSWORD", "SISTEMA");
-      return { success: true };
-    }
-  }
-  return { success: false, message: "Usuario no encontrado." };
-}
-
-function resetearPasswordPorAdmin(dniNuevo) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEETS.PERSONAL);
-  const data = sheet.getDataRange().getValues();
-  const d = dniNuevo.toString().replace(/\D/g, "");
-  const CLAVE_DEFECTO = "12345"; // <--- Esta es tu clave por defecto
-
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][2].toString().replace(/\D/g, "") === d) {
-      sheet.getRange(i + 1, 7).setValue(CLAVE_DEFECTO); 
-      sheet.getRange(i + 1, 8).setValue("SI"); // Marcamos que debe cambiarla
-      return "Clave reseteada a '" + CLAVE_DEFECTO + "' exitosamente.";
-    }
-  }
-  return "Error: No se encontró el DNI solicitado.";
 }
 
 function buscarPersonaPorDni(dni) {
   const data = getSheet(SHEETS.PERSONAL).getDataRange().getValues();
   const d = dni.toString().replace(/\D/g, "");
   for (let i = 1; i < data.length; i++) {
-    if (data[i][2].toString().replace(/\D/g, "") === d) {
-      return { nombre: data[i][0], apellido: data[i][1], cargo: data[i][3] };
+    if (data[i][COL_PER.DNI].toString().replace(/\D/g, "") === d) {
+      return { nombre: data[i][COL_PER.NOMBRE], apellido: data[i][COL_PER.APELLIDO], cargo: data[i][COL_PER.PERFIL] };
     }
   }
   return null;
@@ -656,19 +592,19 @@ function buscarAlumnoParaEdicion(query) {
 
     const encontrados = data.slice(1) // Quitamos cabecera
       .filter(f => {
-        const dni = f[COL.DNI] ? f[COL.DNI].toString().replace(/\D/g, "") : "";
-        const ape = f[COL.APE] ? f[COL.APE].toString().toLowerCase() : "";
+        const dni = f[COL_INS.DNI] ? f[COL_INS.DNI].toString().replace(/\D/g, "") : "";
+        const ape = f[COL_INS.APELLIDO] ? f[COL_INS.APELLIDO].toString().toLowerCase() : "";
         // Busca coincidencia parcial en DNI o Apellido
         return dni.includes(q) || ape.includes(qTexto);
       })
       .map(f => {
         return {
-          nombre: f[COL.NOM],
-          apellido: f[COL.APE],
-          dni: f[COL.DNI],
-          institucion: f[COL.INST] || "Sin Sede Asignada",
-          asistencia: f[COL.ASIST] || 0,
-          estado: f[COL.ESTADO]
+          nombre: f[COL_INS.NOMBRE],
+          apellido: f[COL_INS.APELLIDO],
+          dni: f[COL_INS.DNI],
+          institucion: f[COL_INS.INSTITUCION] || "Sin Sede Asignada",
+          asistencia: f[COL_INS.ASISTENCIA] || 0,
+          estado: f[COL_INS.ESTADO_TRAMITE]
         };
       });
 
@@ -686,6 +622,48 @@ function buscarAlumnoParaEdicion(query) {
     return { success: false, message: "Error en la búsqueda: " + e.toString() };
   }
 }
+
+function resetearPasswordPorAdmin(dniNuevo) {
+  const sheet = getSheet(SHEETS.PERSONAL);
+  const data = sheet.getDataRange().getValues();
+  const d = dniNuevo.toString().replace(/\D/g, "");
+  const CLAVE_DEFECTO = "12345";
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][COL_PER.DNI].toString().replace(/\D/g, "") === d) {
+      sheet.getRange(i + 1, COL_PER.PASSWORD + 1).setValue(CLAVE_DEFECTO);
+      sheet.getRange(i + 1, COL_PER.REQUIERE_CAMBIO + 1).setValue("SI");
+      return { success: true };
+    }
+  }
+
+  return { success: false, message: "Usuario no encontrado." };
+}
+
+function actualizarPasswordPersonal(dni, nuevaPass) {
+  const sheet = getSheet(SHEETS.PERSONAL);
+  const data = sheet.getDataRange().getValues();
+  const d = dni.toString().replace(/\D/g, "");
+
+  if (nuevaPass === "12345" || nuevaPass.length < 4) {
+    return { success: false, message: "La clave es muy débil o es la de defecto." };
+  }
+
+  for (let i = 1; i < data.length; i++) {
+    const dniFila = data[i][COL_PER.DNI].toString().replace(/\D/g, "");
+
+    if (dniFila === d) {
+      sheet.getRange(i + 1, COL_PER.PASSWORD + 1).setValue(nuevaPass);
+      sheet.getRange(i + 1, COL_PER.REQUIERE_CAMBIO + 1).setValue("NO");
+
+      registrarAccion(d, "ACTUALIZÓ SU PASSWORD", "SISTEMA");
+      return { success: true };
+    }
+  }
+
+  return { success: false, message: "Usuario no encontrado." };
+}
+
 // --- 7. AUXILIARES ---
 function marcarTramiteFinalizado(dni, dniOperador) {
 

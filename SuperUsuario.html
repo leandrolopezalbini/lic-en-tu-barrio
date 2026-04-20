@@ -239,7 +239,7 @@
     if (isNaN(fecha.getTime())) return "";
     // Ajuste de zona horaria para que no te reste un día
     fecha.setMinutes(fecha.getMinutes() + fecha.getTimezoneOffset());
-    return fecha.toISOString().split('T')[0];
+    return fecha.toISOString().split('T')[COL_INS.FNAC].substring(0, 10);
   }
 
   // --- GESTIÓN DE ALUMNOS ---
@@ -277,14 +277,14 @@
 
       let alumno = null;
       for (let i = 1; i < dataIns.length; i++) {
-        if (dataIns[i][COL.DNI].toString().replace(/\D/g, "") === dBusqueda) {
+        if (dataIns[i][COL_INS.DNI].toString().replace(/\D/g, "") === dBusqueda) {
           alumno = {
-            nombre: dataIns[i][COL.NOM],
-            apellido: dataIns[i][COL.APE],
-            dni: dataIns[i][COL.DNI],
-            fechaNac: dataIns[i][COL.FNAC],
-            institucion: dataIns[i][COL.INST],
-            asistencia: dataIns[i][COL.ASIST] || 0
+            nombre: dataIns[i][COL_INS.NOMBRE],
+            apellido: dataIns[i][COL_INS.APELLIDO],
+            dni: dataIns[i][COL_INS.DNI],
+            fechaNac: dataIns[i][COL_INS.FNAC],
+            institucion: dataIns[i][COL_BAR.INST],
+            asistencia: dataIns[i][COL_INS.ASISTENCIA] || 0
           };
           break;
         }
@@ -295,7 +295,7 @@
       // 2. Obtener lista de Sedes (para el <select> del formulario)
       const sheetSedes = getSheet(SHEETS.BARRIOS);
       const dataSedes = sheetSedes.getDataRange().getValues();
-      const sedes = dataSedes.slice(1).map(f => ({ nombre: f[1] })).filter(s => s.nombre);
+      const sedes = dataSedes.slice(1).map(f => ({ nombre: f[COL_BAR.INST] })).filter(s => s.nombre);
 
       return { 
         success: true, 
@@ -442,7 +442,7 @@ function verDetalleExamenAdmin(dni) {
   function cargarLogs() {
     google.script.run.withSuccessHandler(logs => {
       let html = `<table class="highlight"><thead><tr><th>Fecha</th><th>Operador</th><th>Acción</th><th>Detalle</th></tr></thead><tbody>`;
-      logs.forEach(l => { html += `<tr><td>${new Date(l[0]).toLocaleString()}</td><td>${l[2]}</td><td><span class="chip blue white-text">${l[3]}</span></td><td>${l[4]}</td></tr>`; });
+      logs.forEach(l => { html += `<tr><td>${new Date(l[COL_LOG.FECHA]).toLocaleString()}</td><td>${l[COL_LOG.OPERADOR]}</td><td><span class="chip blue white-text">${l[COL_LOG.ACCION]}</span></td><td>${l[COL_LOG.DETALLE]}</td></tr>`; });
       document.getElementById('logContenedor').innerHTML = html + `</tbody></table>`;
     }).obtenerLogs();
   }
