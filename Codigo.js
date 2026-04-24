@@ -5,20 +5,21 @@ function doGet(e) {
     const dniURL = e.parameter.dni || "0";
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    // 1. Configuración de la institución
     const conf = ss.getSheetByName("Configuracion") || ss.getSheetByName("Config");
+
     const instData = {
       nombre: conf ? (conf.getRange("B3").getValue() || "Secretaria Seguridad Mercedes") : "Licencia en tu barrio",
       logo: conf ? (conf.getRange("B4").getValue() || "") : "",
       url: ScriptApp.getService().getUrl()
     };
 
-    // 2. Manejo de cancelación (Segura con pasos)
+    Logger.log("URL: " + instData.url); // 👈 ahora sí
+
     if (e.parameter.action === 'cancelar' && e.parameter.dni) {
-      const step = e.parameter.step || "confirmar"; // Por defecto pide confirmar
+      const step = e.parameter.step || "confirmar";
       return manejarCancelacion(e.parameter.dni, step, instData);
     }
-    // 3. Ruteo de páginas
+
     const fileMap = {
       'examen': 'Examen',
       'inscripcion': 'Inscripcion',
@@ -30,7 +31,6 @@ function doGet(e) {
 
     let fileName = fileMap[p] || 'Inicio';
 
-    // 4. Generación del Template
     const template = HtmlService.createTemplateFromFile(fileName);
     template.user = { dni: dniURL };
     template.inst = instData;

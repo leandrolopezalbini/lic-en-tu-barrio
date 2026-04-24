@@ -20,6 +20,18 @@ function findColumnByName(sheet, columnName) {
   return index !== -1 ? index + 1 : 1; // Retorna la columna 1 si no la encuentra para evitar error
 }
 
+function logError(contexto, error) {
+  const sheet = SpreadsheetApp.getActive().getSheetByName("LogsErrores") 
+    || SpreadsheetApp.getActive().insertSheet("LogsErrores");
+
+  sheet.appendRow([
+    new Date(),
+    contexto,
+    error.message || error,
+    JSON.stringify(error.stack || "")
+  ]);
+}
+
 function generarPDFAlumnosFiltrados(listaAlumnos) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const conf = ss.getSheetByName("Configuracion");

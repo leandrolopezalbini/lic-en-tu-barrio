@@ -1,5 +1,65 @@
 // Database.js
 
+// ================================
+// 🔹 CORE
+// ================================
+
+function limpiarDni(dni) {
+  return (dni || "").toString().replace(/\D/g, "");
+}
+
+function logErrorGS(contexto, e) {
+  Logger.log(`❌ ${contexto}: ${e}`);
+}
+
+// ================================
+// 🔹 HELPERS INSCRIPCION
+// ================================
+
+function existeDni(dni) {
+  const data = getSheet(SHEETS.INSCRIPCIONES).getDataRange().getValues();
+  const d = limpiarDni(dni);
+
+  return data.some(f =>
+    f[COL_INS.DNI] &&
+    limpiarDni(f[COL_INS.DNI]) === d
+  );
+}
+
+function obtenerInfoSede(nombreSede) {
+  const sedes = getSheet(SHEETS.BARRIOS).getDataRange().getValues();
+  return sedes.find(s => s[COL_BAR.INST] === nombreSede) || null;
+}
+
+function armarFilaInscripcion(datos, infoSede) {
+  return [
+    getSheet(SHEETS.INSCRIPCIONES).getLastRow() + 1,
+    datos.nombre,
+    datos.apellido,
+    limpiarDni(datos.dni),
+    datos.fechaNac,
+    datos.tel,
+    datos.email,
+    datos.cat,
+    infoSede?.[COL_BAR.BARRIO] || "No especificado",
+    datos.inst,
+    infoSede?.[COL_BAR.F1] || "",
+    infoSede?.[COL_BAR.F2] || "",
+    infoSede?.[COL_BAR.F_EX] || "",
+    0,
+    "",
+    "INSCRIPTO"
+  ];
+}
+
+function insertarInscripcion(fila) {
+  getSheet(SHEETS.INSCRIPCIONES).appendRow(fila);
+}
+
+
+
+
+///////////////////////////////////
 // --- 1. NÚCLEO Y AUDITORÍA ---
 
 function getSheet(nombre) {
@@ -115,23 +175,57 @@ function obtenerDatosEdicionCompleta(dni) {
 }
 
 function registrarAsistenciaFila(dniAlumno, presente, dniOperador) {
-  const sheet = getSheet(SHEETS.INSCRIPCIONES);
-  const data = sheet.getDataRange().getValues();
-  const dAlu = dniAlumno.toString().replace(/\D/g, "");
+  try {
 
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][COL_INS.DNI].toString().replace(/\D/g, "") === dAlu) {
-      let actual = parseFloat(data[i][COL_INS.ASISTENCIA]) || 0;
-      const incremento = 100 / (typeof TOTAL_CLASES !== 'undefined' ? TOTAL_CLASES : 2);
-      let nuevo = presente ? Math.min(100, actual + incremento) : Math.max(0, actual - incremento);
-      
-      sheet.getRange(i + 1, COL_INS.ASISTENCIA + 1).setValue(nuevo);
-      registrarAccion(dniOperador, presente ? "PRESENTE" : "QUITÓ ASISTENCIA", `DNI Alumno: ${dAlu}`);
-      if (presente) getSheet(SHEETS.ASISTENCIA).appendRow([new Date(), dAlu, dniOperador]);
-      return { success: true, nuevoValor: nuevo };
+    const sheet = getSheet(SHEETS.INSCRIPCIONES);
+    const data = sheet.getDataRange().getValues();
+    const dAlu = dniAlumno.toString().replace(/\D/g, "");
+
+    for (let i = 1; i < data.length; i++) {
+
+      if (!data[i][COL_INS.DNI]) continue;
+
+      if (data[i][COL_INS.DNI].toString().replace(/\D/g, "") === dAlu) {
+
+        let actual = parseFloat(data[i][COL_INS.ASISTENCIA]) || 0;
+
+        const incremento = 100 / (typeof TOTAL_CLASES !== 'undefined' ? TOTAL_CLASES : 2);
+
+        let nuevo = presente
+          ? Math.min(100, actual + incremento)
+          : Math.max(0, actual - incremento);
+
+        sheet.getRange(i + 1, COL_INS.ASISTENCIA + 1).setValue(nuevo);
+
+        registrarAccion(
+          dniOperador,
+          presente ? "PRESENTE" : "QUITÓ ASISTENCIA",
+          `DNI Alumno: ${dAlu}`
+        );
+
+        if (presente) {
+          getSheet(SHEETS.ASISTENCIA).appendRow([new Date(), dAlu, dniOperador]);
+        }
+
+        return { success: true, nuevoValor: nuevo };
+      }
     }
+
+    return { success: false, message: "Alumno no encontrado" };
+
+  } catch (error) {
+
+    logError("registrarAsistenciaFila", error, {
+      dniAlumno,
+      presente,
+      dniOperador
+    });
+
+    return {
+      success: false,
+      message: "Error interno del servidor"
+    };
   }
-  return { success: false, message: "Alumno no encontrado" };
 }
 
 function obtenerAlumnosPorFiltro(sede) {
@@ -180,101 +274,128 @@ function obtenerAlumnosPorFiltro(sede) {
 // --- 3. PROCESO DE INSCRIPCIÓN ---
 
 function obtenerOpcionesCursada() {
-  const sedes = getSheet(SHEETS.BARRIOS).getDataRange().getValues();
-  const inscripciones = getSheet(SHEETS.INSCRIPCIONES).getDataRange().getValues();
+  try {
+    const sheetBarrios = getSheet(SHEETS.BARRIOS);
+    const sheetInsc = getSheet(SHEETS.INSCRIPCIONES);
 
-  const conteo = inscripciones.slice(1).reduce((acc, f) => {
-    const sede = f[COL_INS.INSTITUCION];
-    acc[sede] = (acc[sede] || 0) + 1;
-    return acc;
-  }, {});
+    if (!sheetBarrios || !sheetInsc) {
+      throw new Error("No se encontraron las hojas");
+    }
 
-  return sedes.slice(1)
-    .filter(r => r[COL_BAR.INST])
-    .map(r => {
-      const sedeNombre = r[COL_BAR.INST];
-      const inscritos = conteo[sedeNombre] || 0;
-      const cupoMax = parseInt(r[COL_BAR.CUPO]) || 0;
-      const agotado = (cupoMax > 0 && inscritos >= cupoMax);
+    const sedes = sheetBarrios.getDataRange().getValues();
+    const inscripciones = sheetInsc.getDataRange().getValues();
 
-      return {
-        barrio: r[COL_BAR.BARRIO],
-        institucion: sedeNombre,
-        texto: `${r[COL_BAR.BARRIO]} - ${sedeNombre} (${inscritos}/${cupoMax || '∞'})${agotado ? ' [AGOTADO]' : ''}`,
-        deshabilitado: agotado
-      };
+    if (sedes.length <= 1) return [];
+
+    // ===============================
+    // 🔹 CONTEO DE INSCRIPTOS
+    // ===============================
+    const conteo = {};
+
+    inscripciones.slice(1).forEach(f => {
+      const sede = (f[COL_INS.INSTITUCION] || "").toString().trim();
+      if (!sede) return;
+
+      conteo[sede] = (conteo[sede] || 0) + 1;
     });
+
+    // ===============================
+    // 🔹 ARMADO DE OPCIONES
+    // ===============================
+    const resultado = sedes.slice(1)
+      .filter(r => r[COL_BAR.INST])
+      .map(r => {
+
+        const barrio = (r[COL_BAR.BARRIO] || "").toString().trim();
+        const sedeNombre = (r[COL_BAR.INST] || "").toString().trim();
+
+        if (!sedeNombre) return null;
+
+        const inscritos = conteo[sedeNombre] || 0;
+
+        const cupoRaw = r[COL_BAR.CUPO];
+        const cupoMax = Number(cupoRaw) || 0;
+
+        const agotado = (cupoMax > 0 && inscritos >= cupoMax);
+
+        return {
+          barrio,
+          institucion: sedeNombre,
+          texto: `${barrio} - ${sedeNombre} (${inscritos}/${cupoMax || '∞'})${agotado ? ' [AGOTADO]' : ''}`,
+          deshabilitado: agotado
+        };
+      })
+      .filter(x => x !== null);
+      // 👇 👉 ACÁ EXACTAMENTE
+    Logger.log("RESULTADO OPCIONES:");
+    Logger.log(JSON.stringify(resultado, null, 2));
+    Logger.log("SEDES RAW:");
+    Logger.log(JSON.stringify(sedes.slice(0,5)));
+        
+    Logger.log("INSCRIPCIONES RAW:");
+    Logger.log(JSON.stringify(inscripciones.slice(0,5)));
+    return resultado;    
+
+  } catch (err) {
+    Logger.log("ERROR obtenerOpcionesCursada: " + err.message);
+    
+    return [];
+  }
 }
 
 function procesarNuevaInscripcion(datos) {
   try {
-    const sheet = getSheet(SHEETS.INSCRIPCIONES);
-    const data = sheet.getDataRange().getValues();
-    const dniLimpio = datos.dni.toString().replace(/\D/g, "");
 
-    // 1. VALIDACIÓN DE DUPLICADOS
-    const yaExiste = data.some(fila => 
-      fila[COL_INS.DNI] && 
-      fila[COL_INS.DNI].toString().replace(/\D/g, "") === dniLimpio
-    );
-    if (yaExiste) {
-      return { success: false, message: "Ya existe una inscripción activa para el DNI " + dniLimpio };
+    const dni = limpiarDni(datos.dni);
+
+    // 1. Validar duplicado
+    if (existeDni(dni)) {
+      return {
+        success: false,
+        message: "Ya existe una inscripción activa para el DNI " + dni
+      };
     }
 
-    // 2. BUSCAR INFO DE SEDE
-    const sedes = getSheet(SHEETS.BARRIOS).getDataRange().getValues();
-    let infoSede = sedes.find(s => s[COL_BAR.INST] === datos.inst) || [];
-    const barrioEncontrado = infoSede[COL_BAR.BARRIO] || "No especificado";
+    // 2. Obtener sede
+    const infoSede = obtenerInfoSede(datos.inst);
 
-    // 3. ARMAR FILA
-    const fila = [
-      sheet.getLastRow() + 1,
-      datos.nombre,
-      datos.apellido,
-      dniLimpio,
-      datos.fechaNac,
-      datos.tel,
-      datos.email,
-      datos.cat,
-      barrioEncontrado,
-      datos.inst,
-      infoSede[COL_BAR.F1] || "",
-      infoSede[COL_BAR.F2] || "",
-      infoSede[COL_BAR.F_EX] || "",
-      0,
-      "",
-      "INSCRIPTO"
-    ];
+    // 3. Armar fila
+    const fila = armarFilaInscripcion(datos, infoSede);
 
-    sheet.appendRow(fila);
+    // 4. Insertar
+    insertarInscripcion(fila);
 
-    // 4. REGISTRAR EN HISTORIAL
+    // 5. Log
     registrarAccion(
-      dniLimpio,
+      dni,
       "NUEVA INSCRIPCIÓN",
       `Alumno: ${datos.apellido}, ${datos.nombre} | Cat: ${datos.cat} | Inst: ${datos.inst}`
     );
 
-    // 5. ENVÍO DE MAIL
+    // 6. Mail (igual que antes)
     if (datos.email && datos.email.includes("@")) {
       try {
         const fechasObj = {
-          fecha1: infoSede[COL_BAR.F1] || "",
-          fecha2: infoSede[COL_BAR.F2] || "",
-          fechaExamen: infoSede[COL_BAR.F_EX] || ""
+          fecha1: infoSede?.[COL_BAR.F1] || "",
+          fecha2: infoSede?.[COL_BAR.F2] || "",
+          fechaExamen: infoSede?.[COL_BAR.F_EX] || ""
         };
 
         enviarMailConfirmacion(datos.email, datos, fechasObj);
 
       } catch (eMail) {
-        console.warn("Fallo envío mail: " + eMail.message);
+        Logger.log("⚠️ Error mail: " + eMail.message);
       }
     }
 
     return { success: true };
 
   } catch (e) {
-    return { success: false, message: "Error en servidor: " + e.toString() };
+    logErrorGS("procesarNuevaInscripcion", e);
+    return {
+      success: false,
+      message: "Error en servidor: " + e.toString()
+    };
   }
 }
 
@@ -507,7 +628,7 @@ function crearNuevoPersonal(datos) {
     const data = sheet.getDataRange().getValues();
     
     // 1. Limpiar DNI (quitar puntos o espacios)
-    const dniNuevo = datos.dni.toString().replace(/\D/g, "");
+    limpiarDni(datos.dni);
 
     // 2. Validar duplicados en la columna C (índice 2)
     const existe = data.some(fila => fila[COL_PER.DNI].toString().replace(/\D/g, "") === dniNuevo);

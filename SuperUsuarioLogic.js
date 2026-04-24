@@ -294,7 +294,7 @@ function actualizarDatosAlumno(dniOriginal, datos, dniOperador) {
           }
 
         const dniLimpio = datos.dni 
-          ? datos.dni.toString().replace(/\D/g, "")
+          ? limpiarDni(datos.dni)
           : dataIns[i][COL_INS.DNI];
 
           // ESCRITURA EN BLOQUE 1: Datos Personales (Columnas B a J)          

@@ -282,19 +282,30 @@ function obtenerTodasLasPreguntas() {
 
     Logger.log("Preguntas RAW: " + preguntasRaw.length);
 
-    return preguntasRaw.map((r, i) => ({
-      id: i + 1,
-      texto: r[COL_PREG.PREGUNTA],
-      opciones: {
-        a: r[COL_PREG.OPC1],
-        b: r[COL_PREG.OPC2],
-        c: r[COL_PREG.OPC3]
-      },
-      correcta: r[COL_PREG.CORRECTA].toString().toLowerCase().trim(),
-      puntos: 1,
-      tiempo: 30,
-      excluyente: false
-    }));
+    return preguntasRaw.map((r, i) => {
+
+      let texto = r[COL_PREG.PREGUNTA];
+
+      // 🔥 REEMPLAZO INTELIGENTE DE IMÁGENES
+      texto = texto.replace(
+        /obtenerUrlImagen\('(.+?)'\)/g,
+        (_, fileId) => obtenerUrlImagen(fileId)
+      );
+
+      return {
+        id: i + 1,
+        texto: texto, // 🔥 ya viene procesado
+        opciones: {
+          a: r[COL_PREG.OPC1],
+          b: r[COL_PREG.OPC2],
+          c: r[COL_PREG.OPC3]
+        },
+        correcta: r[COL_PREG.CORRECTA].toString().toLowerCase().trim(),
+        puntos: 1,
+        tiempo: 30,
+        excluyente: false
+      };
+    });
 
   } catch (e) {
     Logger.log("ERROR preguntas: " + e);

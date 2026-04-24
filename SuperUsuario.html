@@ -9,7 +9,7 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!-- CSS GLOBAL -->
-  <?!= HtmlService.createHtmlOutputFromFile('Styles').getContent(); ?>
+  <!-- <?!= include('Styles') ?> -->
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -427,18 +427,33 @@ function verDetalleExamenAdmin(dni) {
 }
 
   // --- PREGUNTAS, LOGS Y CUPOS (Igual a tu original pero optimizado) ---
-  function cargarPreguntas() {
-    google.script.run.withSuccessHandler(preguntas => {
-      let html = '<ul class="collapsible">';
-      preguntas.forEach((p, i) => {
-        html += `<li><div class="collapsible-header"><b>${i+1}.</b> ${p.pregunta.substring(0,50)}...</div>
-          <div class="collapsible-body"><p>${p.pregunta}</p><button class="btn-flat red-text" onclick="eliminarPregunta(${i})">Eliminar</button></div></li>`;
-      });
-      document.getElementById('listaPreguntas').innerHTML = html + '</ul>';
-      M.Collapsible.init(document.querySelectorAll('.collapsible'));
-    }).obtenerPreguntas();
-  }
+function cargarPreguntas() {
+  google.script.run.withSuccessHandler(preguntas => {
 
+    let html = '<ul class="collapsible">';
+
+    preguntas.forEach((p, i) => {
+      html += `
+        <li>
+          <div class="collapsible-header">
+            <b>${i+1}.</b> ${p.texto.substring(0,50)}...
+          </div>
+
+          <div class="collapsible-body">
+            <p>${p.texto}</p>
+            <button class="btn-flat red-text" onclick="eliminarPregunta(${i})">
+              Eliminar
+            </button>
+          </div>
+        </li>`;
+    });
+
+    document.getElementById('listaPreguntas').innerHTML = html + '</ul>';
+
+    M.Collapsible.init(document.querySelectorAll('.collapsible'));
+
+  }).obtenerTodasLasPreguntas(); // 👈 también corregido
+}
   function cargarLogs() {
     google.script.run.withSuccessHandler(logs => {
       let html = `<table class="highlight"><thead><tr><th>Fecha</th><th>Operador</th><th>Acción</th><th>Detalle</th></tr></thead><tbody>`;

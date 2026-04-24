@@ -3,152 +3,197 @@
 
 <head>
   <base target="_top">
+
   <!-- Materialize -->
   <link rel="stylesheet"
-  href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
-  <!-- Material Icons -->
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <!-- CSS GLOBAL -->
-  <?!= HtmlService.createHtmlOutputFromFile('Styles').getContent(); ?>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<style>
-body{
-  background:#f5f7fa;
-  padding-bottom:30px;
-}
+    href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
 
-.header-inst{
-  background:white;
-  padding:20px;
-  border-bottom:4px solid var(--azul);
-  margin-bottom:30px;
-}
-</style>
+  <!-- Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <style>
+    body {
+      background: #f5f7fa;
+      padding-bottom: 30px;
+    }
+
+    .header-inst {
+      background: white;
+      padding: 20px;
+      border-bottom: 4px solid #1565c0;
+      margin-bottom: 30px;
+    }
+  </style>
 </head>
 
 <body>
+
   <div class="header-inst center-align">
     <h5 class="bold blue-text text-darken-4">Sistema de Licencias</h5>
   </div>
-<a href="<?= inst.url ?>" target="_top" class="btn-large blue darken-4">Salir</a>
+
+  <!-- BOTON SALIR -->
+  <a id="btnSalir" target="_top" class="btn-large blue darken-4">Salir</a>
+
   <div class="container">
     <div class="form-container">
+
       <h5 class="center-align" style="margin-bottom:30px;">Formulario de Inscripción</h5>
+
       <form id="formInscripcion">
 
         <div class="row">
           <div class="input-field col s12 m6">
-            <i class="material-icons prefix">person</i><input type="text" id="nombre"><label for="nombre">Nombre</label>
+            <i class="material-icons prefix">person</i>
+            <input type="text" id="nombre">
+            <label for="nombre">Nombre</label>
           </div>
+
           <div class="input-field col s12 m6">
-            <i class="material-icons prefix">person_outline</i><input type="text" id="apellido" ><label for="apellido">Apellido</label>
+            <i class="material-icons prefix">person_outline</i>
+            <input type="text" id="apellido">
+            <label for="apellido">Apellido</label>
           </div>
         </div>
 
         <div class="row">
           <div class="input-field col s12 m6">
             <i class="material-icons prefix">badge</i>
-            <input type="number" id="dni" inputmode="numeric" oninput="this.value = this.value.replace(/\D/g, '')"><label for="dni">D N I</label>
+            <input type="number" id="dni">
+            <label for="dni">DNI</label>
           </div>
+
           <div class="input-field col s12 m6">
-            <i class="material-icons prefix">cake</i><input type="date" id="fechaNacimiento" ><label for="fechaNacimiento">Fecha de Nacimiento</label>
+            <i class="material-icons prefix">cake</i>
+            <input type="date" id="fechaNacimiento">
           </div>
         </div>
 
         <div class="row">
           <div class="input-field col s12 m6">
-            <i class="material-icons prefix">email</i><input type="email" id="email"><label for="email">Correo Electrónico</label>
+            <i class="material-icons prefix">email</i>
+            <input type="email" id="email">
+            <label for="email">Correo</label>
           </div>
+
           <div class="input-field col s12 m6">
-            <i class="material-icons prefix">phone</i><input type="tel" id="telefono"><label for="telefono">Teléfono (Ej.: 2324421370)</label>
+            <i class="material-icons prefix">phone</i>
+            <input type="tel" id="telefono">
+            <label for="telefono">Teléfono</label>
           </div>
         </div>
 
         <div class="row">
           <div class="input-field col s12">
-            <i class="material-icons prefix">commute</i>
             <select id="categoria">
               <option value="" disabled selected>Seleccione Categoría</option>
-              <option value="A">A - Motos</option>
-              <option value="B">B - Autos</option>
-              <option value="AyB">A y B - Motos y Autos</option>
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="AyB">A y B</option>
             </select>
-            <label>Categoría de Licencia</label>
           </div>
         </div>
 
         <div class="row">
           <div class="input-field col s12 m6">
-            <i class="material-icons prefix">map</i>
-            <select id="selectBarrio" onchange="filtrarPorBarrio()">
-              <option value="" disabled selected>Cargando...</option>
-            </select>
-            <label>Seleccionar Barrio</label>
+            <select id="selectBarrio"></select>
+            <label>Barrio</label>
           </div>
+
           <div class="input-field col s12 m6">
-            <i class="material-icons prefix">account_balance</i>
-            <select id="selectInstitucion" onchange="filtrarPorInstitucion()">
-              <option value="" disabled selected>Cargando...</option>
-            </select>
-            <label>Seleccionar Institución</label>
+            <select id="selectInstitucion"></select>
+            <label>Institución</label>
           </div>
         </div>
 
-        <button type="submit" id="btnEnviar" class="btn-large blue darken-3 waves-effect">
-          Enviar Inscripción <i class="material-icons right">send</i>
+        <button type="submit" id="btnEnviar" class="btn-large blue darken-3">
+          Enviar
         </button>
+
       </form>
     </div>
   </div>
 
+  <!-- LIBS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+
+  <!-- CONFIG SEGURA -->
   <script>
+    const CONFIG = {
+      url: "<?= inst.url ?>"
+    };
+  </script>
+
+  <!-- API -->
+  <script>
+    const API = {
+      call(nombre, ...args) {
+        return new Promise((resolve, reject) => {
+          google.script.run
+            .withSuccessHandler(resolve)
+            .withFailureHandler(reject)[nombre](...args);
+        });
+      }
+    };
+  </script>
+
+  <!-- MAIN -->
+  <script>
+
     let TODAS_OPCIONES = [];
 
-    document.addEventListener('DOMContentLoaded', function() {
-      M.AutoInit();
-      cargarLugares();
-    });
-    console.log("google:", typeof google);
+    document.addEventListener('DOMContentLoaded', async () => {
 
-    function cargarLugares() {
-      google.script.run.withSuccessHandler(opciones => {
+      console.log("HTML cargó OK");
+
+      // 🔹 botón salir
+      const btn = document.getElementById('btnSalir');
+      if (btn) btn.href = CONFIG.url;
+
+      M.AutoInit();
+
+      document.getElementById('formInscripcion')
+        .addEventListener('submit', manejarSubmit);
+
+      document.getElementById('selectBarrio')
+        .addEventListener('change', filtrarPorBarrio);
+
+      document.getElementById('selectInstitucion')
+        .addEventListener('change', filtrarPorInstitucion);
+
+      await cargarLugares();
+    });
+
+    async function cargarLugares() {
+      try {
+        const opciones = await API.call("obtenerOpcionesCursada");
         TODAS_OPCIONES = opciones;
         actualizarSelects(opciones);
-      }).obtenerOpcionesCursada();
-    }
-
-    function cargarSedesDinamicas() {
-      google.script.run.withSuccessHandler(sedes => {
-        const select = document.getElementById('selectSede'); // El ID de tu select
-        select.innerHTML = '<option value="" disabled selected>Seleccione una sede</option>';
-        
-        sedes.forEach(s => {
-          select.innerHTML += `<option value="${s.institucion}">${s.barrio} - ${s.institucion}</option>`;
-        });
-        
-        // Si usas Materialize, hay que reinicializar el select:
-        M.FormSelect.init(select);
-      }).obtenerSedesActivas();
+      } catch (err) {
+        console.error(err);
+      }
     }
 
     function actualizarSelects(data) {
+
       const sBarrio = document.getElementById('selectBarrio');
       const sInst = document.getElementById('selectInstitucion');
-      
-      const barriosUnicos = [...new Set(data.map(item => item.barrio))];
-      const instUnicas = [...new Set(data.map(item => item.institucion))];
 
-      sBarrio.innerHTML = '<option value="" selected>Todos los barrios</option>';
-      barriosUnicos.forEach(b => {
+      const barrios = [...new Set(data.map(i => i.barrio))];
+
+      sBarrio.innerHTML = '<option value="">Todos</option>';
+      barrios.forEach(b => {
         sBarrio.innerHTML += `<option value="${b}">${b}</option>`;
       });
 
-      sInst.innerHTML = '<option value="" disabled selected>Seleccione Institución</option>';
-      data.forEach(item => {
-        let dis = item.deshabilitado ? 'disabled' : '';
-        sInst.innerHTML += `<option value="${item.institucion}" ${dis}>${item.texto}</option>`;
+      sInst.innerHTML = '<option disabled selected>Seleccione</option>';
+      data.forEach(i => {
+        let dis = i.deshabilitado ? 'disabled' : '';
+        sInst.innerHTML += `<option value="${i.institucion}" ${dis}>${i.texto}</option>`;
       });
 
       M.FormSelect.init(sBarrio);
@@ -157,145 +202,51 @@ body{
 
     function filtrarPorBarrio() {
       const barrio = document.getElementById('selectBarrio').value;
-      const sInst = document.getElementById('selectInstitucion');
-      
-      if (!barrio) {
-        actualizarSelects(TODAS_OPCIONES);
-        return;
-      }
-
-      const filtrados = TODAS_OPCIONES.filter(o => o.barrio === barrio);
-      sInst.innerHTML = '<option value="" disabled selected>Instituciones en ' + barrio + '</option>';
-      filtrados.forEach(item => {
-        let dis = item.deshabilitado ? 'disabled' : '';
-        sInst.innerHTML += `<option value="${item.institucion}" ${dis}>${item.texto}</option>`;
-      });
-      M.FormSelect.init(sInst);
+      if (!barrio) return actualizarSelects(TODAS_OPCIONES);
+      actualizarSelects(TODAS_OPCIONES.filter(o => o.barrio === barrio));
     }
 
     function filtrarPorInstitucion() {
       const inst = document.getElementById('selectInstitucion').value;
-      const sBarrio = document.getElementById('selectBarrio');
-      
       const encontrado = TODAS_OPCIONES.find(o => o.institucion === inst);
+
       if (encontrado) {
-        sBarrio.value = encontrado.barrio;
-        M.FormSelect.init(sBarrio);
+        document.getElementById('selectBarrio').value = encontrado.barrio;
+        M.FormSelect.init(document.getElementById('selectBarrio'));
       }
     }
 
-      document.getElementById('formInscripcion').addEventListener('submit', function(e) {
-  e.preventDefault();
+    async function manejarSubmit(e) {
+      e.preventDefault();
 
-  const datos = {
-    nombre: document.getElementById('nombre').value.trim(),
-    apellido: document.getElementById('apellido').value.trim(),
-    dni: document.getElementById('dni').value.toString().replace(/\D/g, ""),
-    fechaNac: document.getElementById('fechaNacimiento').value,
-    email: document.getElementById('email').value.trim(),
-    tel: document.getElementById('telefono').value.trim(),
-    cat: document.getElementById('categoria').value,
-    inst: document.getElementById('selectInstitucion').value
-  };
+      const datos = {
+        nombre: nombre.value.trim(),
+        apellido: apellido.value.trim(),
+        dni: dni.value,
+        fechaNac: fechaNacimiento.value,
+        email: email.value.trim(),
+        tel: telefono.value.trim(),
+        cat: categoria.value,
+        inst: selectInstitucion.value
+      };
 
-  // 1. Validación de campos vacíos
-  if (Object.values(datos).some(valor => !valor)) {
-    return Swal.fire('Atención', 'Por favor, completa todos los campos.', 'warning');
-  }
-
-  // 2. Validación de Email (Regex)
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(datos.email)) {
-    return Swal.fire('Email Inválido', 'Por favor ingresa un correo electrónico real.', 'error');
-  }
-
-  // 3. Validación de Edad (Entre 16 y 64 años)
-  const edad = calcularEdad(datos.fechaNac);
-  if (edad < 16) {
-    return Swal.fire('Edad insuficiente', 'Debes tener al menos 16 años.', 'error');
-  }
-  if (edad > 64) {
-    return Swal.fire('Atención', 'Debes ser menor de 64 años para el programa de licencia en tu barrio.', 'error');
-  }
-
-  // 4. Validación de DNI
-  if (datos.dni.length < 7 || datos.dni.length > 9) {
-    return Swal.fire('DNI Incorrecto', 'El documento debe tener entre 7 y 9 números (sin puntos).', 'error');
-  }
-
-  // 5. Validación de Teléfono (Mínimo 8 dígitos)
-  if (datos.tel.replace(/\D/g, "").length < 6) {
-    return Swal.fire('Teléfono Inválido', 'Por favor ingresa un número de contacto válido (mínimo 6 dígitos).', 'error');
-  }
-
-  // Si todo está OK
-  desactivarBoton();
-
-  google.script.run
-    .withSuccessHandler(res => {
-      if(res.success) {
-        Swal.fire({
-          title: '¡Inscripción Exitosa!',
-          text: 'Se ha enviado un correo de confirmación.',
-          icon: 'success',
-          confirmButtonText: 'Finalizar'
-        }).then(() => window.top.location.href = '<?= inst.url ?>');
-      } else {
-        Swal.fire('Error', res.message, 'error');
-        activarBoton();
-      }
-    })
-    .procesarNuevaInscripcion(datos);
-});
-
-    function desactivarBoton() {
-      const btn = document.getElementById('btnEnviar');
-      btn.disabled = true;
-      btn.innerHTML = 'Enviando... <i class="material-icons right">hourglass_empty</i>';
-    }
-
-    function activarBoton() {
-      const btn = document.getElementById('btnEnviar');
-      btn.disabled = false;
-      btn.innerHTML = 'Enviar Inscripción <i class="material-icons right">send</i>';
-    }
- 
-    function ejecutarConGAS(nombreFuncion, callback, ...args) {
-      if (typeof google === "undefined" || !google.script || !google.script.run) {
-        console.error("❌ GAS no disponible");
-        return;
-      }
-    
-      let runner = google.script.run.withSuccessHandler(callback);
-      runner[nombreFuncion](...args);
-    }
-
-    setTimeout(() => {
       try {
-        google.script.run.withSuccessHandler(r => {
-          console.log("GAS OK:", r);
-        }).getScriptUrl();
-      } catch (e) {
-        console.error("ERROR:", e);
+
+        const res = await API.call("procesarNuevaInscripcion", datos);
+
+        if (res.success) {
+          await Swal.fire('OK', 'Inscripción enviada', 'success');
+          window.top.location.href = CONFIG.url;
+        } else {
+          throw new Error(res.message);
+        }
+
+      } catch (err) {
+        console.error(err);
       }
-    }, 2000);
-
-    //prueba rapida 
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log("google:", typeof google);
-      M.AutoInit();
-      cargarLugares();
-    });
-
-    function calcularEdad(fecha) {
-      const hoy = new Date();
-      const cumple = new Date(fecha);
-      let edad = hoy.getFullYear() - cumple.getFullYear();
-      const m = hoy.getMonth() - cumple.getMonth();
-      if (m < 0 || (m === 0 && hoy.getDate() < cumple.getDate())) edad--;
-      return edad;
     }
-  </script>
-</body>
 
+  </script>
+
+</body>
 </html>
