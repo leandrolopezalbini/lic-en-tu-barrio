@@ -229,46 +229,52 @@ function registrarAsistenciaFila(dniAlumno, presente, dniOperador) {
 }
 
 function obtenerAlumnosPorFiltro(sede) {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    
-    // 1. Buscar sede
-    const sheetBarrios = ss.getSheetByName(SHEETS.BARRIOS);
-    const dataBarrios = sheetBarrios.getDataRange().getValues();
 
-    const infoSede = dataBarrios.find(fila => fila[COL_BAR.INST] === sede);
+  const sheet = getSheet(SHEETS.INSCRIPCIONES);
+  const data = sheet.getDataRange().getValues();
 
-    let fechaExamenSede = "";
-    if (infoSede && infoSede[COL_BAR.F_EX]) {
-      const d = new Date(infoSede[COL_BAR.F_EX]);
-      fechaExamenSede = Utilities.formatDate(d, "GMT-3", "yyyy-MM-dd");
-    }
+  const sedeFiltro = (sede || "").toString().trim().toLowerCase();
 
-    // 2. Alumnos
-    const sheetInsc = ss.getSheetByName(SHEETS.INSCRIPCIONES);
-    const dataInsc = sheetInsc.getDataRange().getValues();
-    dataInsc.shift();
+  // 📅 HOY
+  const hoy = normalizarFecha(new Date());
 
-    const alumnosFiltrados = dataInsc
-      .filter(fila => fila[COL_INS.INSTITUCION] === sede)
-      .map(fila => ({
-        dni: fila[COL_INS.DNI],
-        nombre: fila[COL_INS.NOMBRE],
-        apellido: fila[COL_INS.APELLIDO],
-        asistencia: fila[COL_INS.ASISTENCIA],
-        nota: fila[COL_INS.NOTA],
-        estado: fila[COL_INS.ESTADO_TRAMITE]
-      }));
+  const alumnos = data.slice(1)
+    .filter(r => {
 
-    return {
-      alumnos: alumnosFiltrados,
-      fechaExamenSede: fechaExamenSede
-    };
+      const sedeFila = (r[COL_INS.INSTITUCION] || "")
+        .toString()
+        .trim()
+        .toLowerCase();
 
-  } catch (e) {
-    console.error("Error en obtenerAlumnosPorFiltro: " + e.toString());
-    return { alumnos: [], fechaExamenSede: "", error: e.toString() };
-  }
+      const f1 = normalizarFecha(r[COL_INS.CURSADA1]);
+      const f2 = normalizarFecha(r[COL_INS.CURSADA2]);
+      const fEx = normalizarFecha(r[COL_INS.FECHA_EXAMEN]);
+
+      // 🎯 coincide si HOY es cualquiera de las 3 fechas
+      const coincideFecha = (hoy === f1 || hoy === f2 || hoy === fEx);
+
+      return sedeFila === sedeFiltro && coincideFecha;
+
+    })
+    .map(r => ({
+
+      nombre: r[COL_INS.NOMBRE],
+      apellido: r[COL_INS.APELLIDO],
+      dni: r[COL_INS.DNI],
+      asistencia: r[COL_INS.ASISTENCIA],
+      nota: r[COL_INS.NOTA],
+
+      finalizado: r[COL_INS.ESTADO_TRAMITE] === "FINALIZADO",
+
+      // 👇 info útil para UI
+      esExamen: hoy === normalizarFecha(r[COL_INS.FECHA_EXAMEN])
+
+    }));
+
+  return {
+    alumnos: alumnos,
+    fechaHoy: hoy
+  };
 }
 
 // --- 3. PROCESO DE INSCRIPCIÓN ---
@@ -352,7 +358,7 @@ function procesarNuevaInscripcion(datos) {
     if (existeDni(dni)) {
       return {
         success: false,
-        message: "Ya existe una inscripción activa para el DNI " + dni
+        message: "Ya existe una inscripción para ese DNI " + dni
       };
     }
 
@@ -826,3 +832,39 @@ function marcarTramiteFinalizado(dni, dniOperador) {
 
 }
 
+function limpiarImagenesPreguntas() {
+  const sheet = getSheet(SHEETS.PREGUNTAS);
+  const data = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < data.length; i++) {
+
+    let texto = (data[i][0] || "").toString();
+    let imgCol = (data[i][5] || "").toString();
+
+    // 🔥 extraer ID desde texto viejo
+    const match = texto.match(/obtenerUrlImagen\('(.+?)'\)/);
+
+    if (match) {
+      const id = match[1];
+
+      // limpiar texto
+      texto = texto.replace(match[0], "").trim();
+
+      sheet.getRange(i + 1, 1).setValue(texto); // columna A
+      sheet.getRange(i + 1, 6).setValue(id);    // columna F
+
+      Logger.log(`Fila ${i+1} migrada`);
+    }
+
+    // 🔥 limpiar URLs completas
+    if (imgCol.includes("drive.google.com")) {
+      const idMatch = imgCol.match(/[-\w]{25,}/);
+      if (idMatch) {
+        sheet.getRange(i + 1, 6).setValue(idMatch[0]);
+        Logger.log(`ID limpiado fila ${i+1}`);
+      }
+    }
+  }
+
+  Logger.log("✔ Limpieza terminada");
+}

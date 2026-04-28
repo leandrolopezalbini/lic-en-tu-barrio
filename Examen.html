@@ -9,19 +9,10 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!-- CSS GLOBAL -->
-  <!-- <?!= include('Styles') ?> -->
+  <?!= include('Styles') ?>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<style>
-body{
-  background:#1a237e;
-  color:white;
-}
-.pregunta-excluyente {
-  border-left: 5px solid #c62828;
-  padding-left: 10px;
-}
-</style>
+
 </head>
 
 <body>
@@ -158,7 +149,7 @@ function iniciarCargaPreguntas() {
       }
 
       preguntas = data;
-      console.log("✅ Preguntas cargadas:", preguntas); // 🔴 DEBUG 2 (ACÁ ESTÁ TU console.log)
+      console.log("✅ Preguntas cargadas:", preguntas); 
       mostrarPregunta();
     })
     .withFailureHandler(err => {
@@ -178,91 +169,87 @@ function mostrarPregunta() {
 
   const p = preguntas[indice];
 
-  // ⏱️ inicio tiempo
-  tiempoInicioPregunta = Date.now();
+  const txt = document.getElementById('txtPregunta');
 
-  // 📊 progreso
-  document.getElementById('txtProgreso').innerText =
-    "Pregunta " + (indice + 1) + "/" + preguntas.length;
+  // ✨ efecto suave (sin depender de librerías)
+  txt.style.opacity = 0;
 
-  // 📌 texto pregunta
-  const txtPregunta = document.getElementById('txtPregunta');
+  setTimeout(() => {
+    txt.innerHTML = p.texto;
+    txt.style.opacity = 1;
+  }, 150);
 
-  txtPregunta.innerHTML = p.texto;
-
-  // 🎨 estilo visual
-  if (p.excluyente) {
-    txtPregunta.classList.add('pregunta-excluyente');
-  } else {
-    txtPregunta.classList.remove('pregunta-excluyente');
-  }
-
-  // 🔴 ALERTA EXCLUYENTE
-  const alerta = document.getElementById('alertaExcluyente');
-
-  if (p.excluyente === true) {
-    alerta.style.display = 'block';
-    alerta.innerHTML = `
-      <div style="
-        background:#ffebee;
-        color:#c62828;
-        padding:10px;
-        border-radius:8px;
-        font-size:0.9em;
-        text-align:center;
-      ">
-        ⚠ <b>Pregunta Excluyente</b><br>
-        Si responde incorrectamente, el examen es desaprobado.
-      </div>
-    `;
-  } else {
-    alerta.style.display = 'none';
-    alerta.innerHTML = '';
-  }
-
-  // 📦 opciones
   const box = document.getElementById('opcionesBox');
   box.innerHTML = "";
 
-  const renderOptionHTML = (opt, content) => {
-    return `<b>${opt.toUpperCase()})</b> ${content || ''}`;
-  };
+  ['a','b','c'].forEach(opt => {
+    const optText = p.opciones?.[opt];
+    if (!optText) return;
 
-  if (!p.opciones) {
-    box.innerHTML =
-      '<p class="red-text">No se encontraron opciones para esta pregunta.</p>';
-  } else {
+    const btn = document.createElement('button');
+    btn.className = "option-btn";
+    btn.innerHTML = `<b>${opt.toUpperCase()})</b> ${optText}`;
 
-    ['a','b','c'].forEach(opt => {
+    // ✨ feedback táctil (clave en mobile)
+    btn.onclick = () => {
+      btn.style.background = "#e3f2fd";
+      btn.style.borderColor = "#1a237e";
+      setTimeout(() => procesarRespuesta(opt), 150);
+    };
 
-      const optText = p.opciones?.[opt];
-      if (!optText) return;
+    box.appendChild(btn);
+  });
 
-      const btn = document.createElement('button');
+  // ===============================
+  // 🖼️ IMAGEN OPTIMIZADA
+  // ===============================
+  if (p.imagen) {
 
-      btn.className = "option-btn";
+    console.log("IMG:", p.imagen);
 
-      btn.innerHTML = renderOptionHTML(opt, optText);
+    const wrapper = document.createElement('div');
+    wrapper.style.marginTop = "15px";
+    wrapper.style.textAlign = "center";
 
-      btn.onclick = () => procesarRespuesta(opt);
+    const img = document.createElement('img');
+    img.src = p.imagen;
+    img.loading = "lazy"; // 🔥 mejora performance mobile
 
-      box.appendChild(btn);
+    // estilo limpio
+    img.style.maxWidth = "100%";
+    img.style.borderRadius = "12px";
+    img.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
 
-    });
+    // loader simple
+    const loader = document.createElement('div');
+    loader.innerText = "Cargando imagen...";
+    loader.style.fontSize = "0.9rem";
+    loader.style.color = "#777";
 
+    img.onload = () => loader.remove();
+
+    img.onerror = () => {
+      console.warn("⚠ No cargó imagen:", p.imagen);
+      loader.innerText = "⚠ Imagen no disponible";
+      img.remove();
+    };
+
+    wrapper.appendChild(loader);
+    wrapper.appendChild(img);
+    box.appendChild(wrapper);
   }
 
-  // ⏱️ reloj por pregunta
   iniciarReloj(p.tiempo || 30);
 }
 
 function procesarRespuesta(opt) {
   clearInterval(timer);
+
   const p = preguntas[indice];
 
   respuestasParaServidor[indice] = opt;
 
-  const esCorrecta = (opt === p.correcta);    
+  const esCorrecta = (opt === p.correcta);
 
   respuestas.push({
     pregunta: p.texto,

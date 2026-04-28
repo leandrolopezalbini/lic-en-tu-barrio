@@ -71,8 +71,13 @@ const COL_PREG = {
   OPC1: 1,
   OPC2: 2,
   OPC3: 3,
-  CORRECTA: 4
-}
+  CORRECTA: 4,
+  IMAGEN: 5,   // 👈 NUEVA
+  PUNTOS: 6,
+  TIEMPO: 7,
+  EXCLUYENTE: 8
+};
+
 
 const COL_RESP = {
   FECHA: 0,

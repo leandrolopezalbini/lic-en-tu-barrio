@@ -9,71 +9,11 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!-- CSS GLOBAL -->
-  <!-- <?!= include('Styles') ?> -->
+  <?!= include('Styles') ?>
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<style>
-    :root {
-      --admin-color: #263238;
-    }
 
-    body {
-      background: #f5f5f5;
-    }
-
-    .nav-admin {
-      background: var(--admin-color);
-      padding: 0 20px;
-    }
-
-    .card-stat {
-      border-radius: 15px;
-      color: white;
-      padding: 20px;
-    }
-
-    .tab-content {
-      padding: 20px;
-      background: white;
-      border-radius: 0 0 15px 15px;
-    }
-
-    .tabs .tab a {
-      color: rgba(38, 50, 56, 0.7);
-    }
-
-    .tabs .tab a:hover,
-    .tabs .tab a.active {
-      color: #263238;
-    }
-
-    .tabs .indicator {
-      background-color: #263238;
-    }
-    .hero {
-  text-align: center;
-  margin-bottom: 40px;
-  width: 100%;
-  cursor: pointer;
-}
-
-.hero img {
-  max-height: 100px;
-  margin-bottom: 10px;
-}
-
-.hero-link{
-  text-decoration:none;
-  color:inherit;
-  display:block;
-}
-
-.hero:hover{
-  opacity:0.9;
-  transition:0.2s;
-}
-  </style>
 </head>
 
 <body>
@@ -239,7 +179,7 @@
     if (isNaN(fecha.getTime())) return "";
     // Ajuste de zona horaria para que no te reste un día
     fecha.setMinutes(fecha.getMinutes() + fecha.getTimezoneOffset());
-    return fecha.toISOString().split('T')[COL_INS.FNAC].substring(0, 10);
+    return fecha.toISOString().split('T')[0];
   }
 
   // --- GESTIÓN DE ALUMNOS ---

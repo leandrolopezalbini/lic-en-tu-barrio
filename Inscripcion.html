@@ -7,6 +7,9 @@
   <!-- Materialize -->
   <link rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    
+    <!-- CSS GLOBAL -->
+  <?!= include('Styles') ?>
 
   <!-- Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -15,19 +18,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-  <style>
-    body {
-      background: #f5f7fa;
-      padding-bottom: 30px;
-    }
-
-    .header-inst {
-      background: white;
-      padding: 20px;
-      border-bottom: 4px solid #1565c0;
-      margin-bottom: 30px;
-    }
-  </style>
 </head>
 
 <body>
@@ -91,9 +81,9 @@
           <div class="input-field col s12">
             <select id="categoria">
               <option value="" disabled selected>Seleccione Categoría</option>
-              <option value="A">A</option>
-              <option value="B">B</option>
-              <option value="AyB">A y B</option>
+              <option value="A">A - Motos </option>
+              <option value="B">B - Autos</option>
+              <option value="AyB">A y B - Motos y Autos</option>
             </select>
           </div>
         </div>

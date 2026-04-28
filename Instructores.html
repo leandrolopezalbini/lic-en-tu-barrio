@@ -9,37 +9,10 @@
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!-- CSS GLOBAL -->
-  <!-- <?!= include('Styles') ?> -->
+  <?!= include('Styles') ?>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<style>
-body{
-  background:#f0f2f5;
-}
 
-.nav-inst{
-  background:#0d47a1;
-  padding:10px 20px;
-  color:white;
-  margin-bottom:20px;
-}
-
-.header-filtros{
-  background:white;
-  padding:20px;
-  border-radius:10px;
-  box-shadow:0 2px 10px rgba(0,0,0,0.1);
-}
-.card-stat{
-  border-radius:14px;
-  padding:25px;
-  background:white;
-  box-shadow:0 6px 20px rgba(0,0,0,0.05);
-}
-table.striped tbody tr:hover{
-  background:#f7f9fc;
-}
-</style>
 </head>
 
 <body>
@@ -81,7 +54,6 @@ table.striped tbody tr:hover{
           <label>Sede / Institución</label>
         </div>
         <div class="input-field col s12 m4">
-          <input type="date" id="filtroFecha">
           <label class="active">Fecha de la Clase</label>
         </div>
         <div class="col s12 m4 center-align" style="padding-top: 15px;">
@@ -128,62 +100,90 @@ table.striped tbody tr:hover{
     }).obtenerSedesUnicas();
   }
 
-  function cargarListado() {
-    const sede = document.getElementById('filtroSede').value;
-    const fechaSeleccionada = document.getElementById('filtroFecha').value;
-    
-    if(!sede || !fechaSeleccionada) return Swal.fire('Atención', 'Seleccione sede y fecha', 'warning');
-
-    google.script.run.withSuccessHandler(objetoServidor => {
-      const alumnos = objetoServidor.alumnos;
-      const fechaExamenSede = objetoServidor.fechaExamenSede; 
-      const cuerpo = document.getElementById('cuerpoTabla');
-      cuerpo.innerHTML = '';
-      
-      alumnos.forEach(al => {
-        const asistenciaNum = parseFloat(al.asistencia) || 0;
-        let celdaAccion = '';
-        const esDiaDeExamen = (fechaSeleccionada === fechaExamenSede);
-
-        if (al.finalizado) {
-          // AÑADIMOS BOTÓN DE VER RESPUESTAS SI YA TERMINÓ
-          celdaAccion = `
-            <div style="display:flex; flex-direction:column; gap:5px;">
-              <span class="green-text"><b>FINALIZADO</b></span>
-              <button class="btn-small blue-grey lighten-3 black-text" onclick="verDetalleExamen('${al.dni}')">
-                <i class="material-icons left" style="font-size:1rem;">visibility</i> Ver Examen
-              </button>
-            </div>`;
-        } else if (al.nota === "HABILITADO") {
-          celdaAccion = `<span class="blue-text"><b>YA HABILITADO</b></span>`;
-        } else if (asistenciaNum >= 99 && esDiaDeExamen) {
-          celdaAccion = `<button class="btn-small blue darken-2 pulse" onclick="habilitarExamen('${al.dni}')">HABILITAR AHORA</button>`;
-        } else {
-          celdaAccion = `<span class="grey-text" style="font-size:0.7rem">No habilitado</span>`;
-        }
-
-        cuerpo.innerHTML += `
-          <tr>
-            <td style="text-align:left;"><b>${al.apellido}, ${al.nombre}</b></td>
-            <td>${al.dni}</td>
-            <td>
-              <div class="progress" style="height: 10px; border-radius: 5px; margin-bottom:5px;">
-                <div class="determinate blue darken-2" style="width: ${asistenciaNum}%"></div>
-              </div>
-              <span style="font-size: 0.8em;">${asistenciaNum.toFixed(0)}%</span>
-            </td>
-            <td>
-              <div style="display:flex; align-items:center; justify-content:center; gap:10px;">
-                <button class="btn-floating btn-small green darken-2" onclick="marcarAsistencia('${al.dni}', true)"><i class="material-icons">add</i></button>
-                <button class="btn-floating btn-small red lighten-2" onclick="confirmarQuitarAsistencia('${al.dni}')"><i class="material-icons">remove</i></button>
-                <div style="margin-left:15px; min-width:140px;">${celdaAccion}</div>
-              </div>
-            </td>
-          </tr>`;
-      });
-      document.getElementById('contenedorTabla').style.display = 'block';
-    }).obtenerAlumnosPorFiltro(sede, fechaSeleccionada);
+  function normalizarFechaFront(fecha) {
+    if (!fecha) return "";
+    const f = new Date(fecha);
+    if (isNaN(f.getTime())) return "";
+    return f.toISOString().split('T')[0];
   }
+
+function cargarListado() {
+
+  const sede = document.getElementById('filtroSede').value;
+
+  if(!sede) return Swal.fire('Atención', 'Seleccione sede', 'warning');
+
+  google.script.run.withSuccessHandler(objetoServidor => {
+
+    const alumnos = objetoServidor.alumnos;
+    const cuerpo = document.getElementById('cuerpoTabla');
+    cuerpo.innerHTML = '';
+
+    alumnos.forEach(al => {
+
+      const asistenciaNum = parseFloat(al.asistencia) || 0;
+      let celdaAccion = '';
+
+      if (al.finalizado) {
+
+        celdaAccion = `
+          <div style="display:flex; flex-direction:column; gap:5px;">
+            <span class="green-text"><b>FINALIZADO</b></span>
+            <button class="btn-small blue-grey lighten-3 black-text"
+              onclick="verDetalleExamen('${al.dni}')">
+              <i class="material-icons left" style="font-size:1rem;">visibility</i> Ver Examen
+            </button>
+          </div>`;
+
+      } else if (al.nota === "HABILITADO") {
+
+        celdaAccion = `<span class="blue-text"><b>YA HABILITADO</b></span>`;
+
+      } else if (asistenciaNum >= 99 && al.esExamen) {
+
+        celdaAccion = `
+          <button class="btn-small blue darken-2 pulse"
+            onclick="habilitarExamen('${al.dni}')">
+            HABILITAR AHORA
+          </button>`;
+
+      } else {
+
+        celdaAccion = `<span class="grey-text" style="font-size:0.7rem">No habilitado</span>`;
+      }
+
+      cuerpo.innerHTML += `
+        <tr>
+          <td style="text-align:left;"><b>${al.apellido}, ${al.nombre}</b></td>
+          <td>${al.dni}</td>
+          <td>
+            <div class="progress" style="height: 10px; border-radius: 5px;">
+              <div class="determinate blue darken-2" style="width: ${asistenciaNum}%"></div>
+            </div>
+            <span style="font-size: 0.8em;">${asistenciaNum.toFixed(0)}%</span>
+          </td>
+          <td>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <button class="btn-floating btn-small green"
+                onclick="marcarAsistencia('${al.dni}', true)">
+                <i class="material-icons">add</i>
+              </button>
+
+              <button class="btn-floating btn-small red"
+                onclick="confirmarQuitarAsistencia('${al.dni}')">
+                <i class="material-icons">remove</i>
+              </button>
+
+              <div style="margin-left:10px;">${celdaAccion}</div>
+            </div>
+          </td>
+        </tr>`;
+    });
+
+    document.getElementById('contenedorTabla').style.display = 'block';
+
+  }).obtenerAlumnosPorFiltro(sede);
+}
 
   // --- FUNCIÓN PARA VER DETALLE (Instructor) ---
   function verDetalleExamen(dni) {

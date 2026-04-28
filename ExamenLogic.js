@@ -271,44 +271,51 @@ function validarAccesoExamen(dni) {
 }
 
 function obtenerTodasLasPreguntas() {
-  try {
-    const sheet = getSheet(SHEETS.PREGUNTAS);
-    const data = sheet.getDataRange().getValues();
+  const sheet = getSheet(SHEETS.PREGUNTAS);
+  const data = sheet.getDataRange().getValues();
 
-    const preguntasRaw = data.slice(1).filter(r =>
-      r[COL_PREG.PREGUNTA] &&
-      r[COL_PREG.OPC1]
-    );
+  return data.slice(1)
+    .filter(r => r[COL_PREG.PREGUNTA])
+    .map((r, i) => {
 
-    Logger.log("Preguntas RAW: " + preguntasRaw.length);
+      let imagen = null;
+      const imgIdRaw = r[COL_PREG.IMAGEN];
 
-    return preguntasRaw.map((r, i) => {
+      if (imgIdRaw) {
+        const imgId = imgIdRaw.toString().trim();
 
-      let texto = r[COL_PREG.PREGUNTA];
-
-      // 🔥 REEMPLAZO INTELIGENTE DE IMÁGENES
-      texto = texto.replace(
-        /obtenerUrlImagen\('(.+?)'\)/g,
-        (_, fileId) => obtenerUrlImagen(fileId)
-      );
+        if (
+          imgId.length >= 20 &&
+          /^[a-zA-Z0-9_-]+$/.test(imgId) &&
+          !imgId.includes("obtenerUrlImagen")
+        ) {
+          //imagen = `https://drive.google.com/uc?export=view&id=${imgId}`;
+          imagen = `https://lh3.googleusercontent.com/d/${imgId}`;
+        } else {
+          Logger.log(`⚠ Imagen inválida en fila ${i + 2}: ${imgId}`);
+        }
+      }
 
       return {
         id: i + 1,
-        texto: texto, // 🔥 ya viene procesado
+        texto: r[COL_PREG.PREGUNTA],
+        imagen: imagen,
+
         opciones: {
           a: r[COL_PREG.OPC1],
           b: r[COL_PREG.OPC2],
           c: r[COL_PREG.OPC3]
         },
-        correcta: r[COL_PREG.CORRECTA].toString().toLowerCase().trim(),
-        puntos: 1,
-        tiempo: 30,
-        excluyente: false
+
+        correcta: (r[COL_PREG.CORRECTA] || "")
+          .toString().toLowerCase().trim(),
+
+        puntos: Number(r[COL_PREG.PUNTOS]) || 1,
+        tiempo: Number(r[COL_PREG.TIEMPO]) || 30,
+        excluyente:
+          (r[COL_PREG.EXCLUYENTE] || "")
+            .toString()
+            .toUpperCase() === "SI"
       };
     });
-
-  } catch (e) {
-    Logger.log("ERROR preguntas: " + e);
-    return [];
-  }
 }

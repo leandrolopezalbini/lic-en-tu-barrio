@@ -267,3 +267,36 @@ function testSistemaCompleto() {
 
   Logger.log("===== FIN TEST =====");
 }
+
+function normalizarFecha(fecha) {
+  if (!fecha) return "";
+
+  const f = new Date(fecha);
+
+  if (isNaN(f.getTime())) return "";
+
+  return Utilities.formatDate(
+    f,
+    Session.getScriptTimeZone(),
+    "yyyy-MM-dd"
+  );
+}
+
+function limpiarHojaInscripciones() {
+  const sheet = getSheet(SHEETS.INSCRIPCIONES);
+  const data = sheet.getDataRange().getValues();
+
+  const limpia = data.map((r, i) => {
+    if (i === 0) return r;
+
+    return r.map(c =>
+      typeof c === "string"
+        ? c.trim()
+        : c
+    );
+  });
+
+  sheet.getRange(1,1,limpia.length,limpia[0].length).setValues(limpia);
+
+  Logger.log("✅ Hoja INSCRIPCIONES limpiada");
+}
