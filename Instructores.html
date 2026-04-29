@@ -16,9 +16,6 @@
 </head>
 
 <body>
-  <div class="app-header">
-  <h5>Panel Instructor</h5>
-</div>
   <div class="container">
 
     <a href="<?= inst.url ?>" class="hero-link" target="_top">
@@ -88,15 +85,42 @@
     cargarSedes();
   });
 
+  google.script.run.withSuccessHandler(objetoServidor => {
+
+  console.log("👉 RESPUESTA BACKEND:", objetoServidor);
+
+  const alumnos = objetoServidor.alumnos;
+
+  if (!alumnos || alumnos.length === 0) {
+    document.getElementById('contenedorTabla').style.display = 'block';
+    document.getElementById('cuerpoTabla').innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align:center; padding:20px;">
+          ⚠ No hay alumnos para hoy en esta sede
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  }).obtenerAlumnosPorFiltro("");
+
+
   function cargarSedes() {
     google.script.run.withSuccessHandler(sedes => {
+
       const select = document.getElementById('filtroSede');
+      select.innerHTML = `<option value="" disabled selected>Seleccione Sede</option>`;
+
       sedes.forEach(s => {
         let opt = document.createElement('option');
-        opt.value = s; opt.text = s;
+        opt.value = s;
+        opt.text = s;
         select.appendChild(opt);
       });
+
       M.FormSelect.init(select);
+
     }).obtenerSedesUnicas();
   }
 
@@ -107,83 +131,98 @@
     return f.toISOString().split('T')[0];
   }
 
-function cargarListado() {
+  function cargarListado() {
 
-  const sede = document.getElementById('filtroSede').value;
+    const sede = document.getElementById('filtroSede').value;
 
-  if(!sede) return Swal.fire('Atención', 'Seleccione sede', 'warning');
+    if(!sede) return Swal.fire('Atención', 'Seleccione sede', 'warning');
 
-  google.script.run.withSuccessHandler(objetoServidor => {
+    google.script.run.withSuccessHandler(objetoServidor => {
+      console.log("👉 SELECT VALUE:", document.getElementById('filtroSede').value);
 
-    const alumnos = objetoServidor.alumnos;
-    const cuerpo = document.getElementById('cuerpoTabla');
-    cuerpo.innerHTML = '';
+      const alumnos = objetoServidor.alumnos;
+      const cuerpo = document.getElementById('cuerpoTabla');
+      cuerpo.innerHTML = '';
 
-    alumnos.forEach(al => {
+      alumnos.forEach(al => {
 
-      const asistenciaNum = parseFloat(al.asistencia) || 0;
-      let celdaAccion = '';
+        const asistenciaNum = parseFloat(al.asistencia) || 0;
+        let celdaAccion = '';
 
-      if (al.finalizado) {
+        if (al.finalizado) {
 
-        celdaAccion = `
-          <div style="display:flex; flex-direction:column; gap:5px;">
-            <span class="green-text"><b>FINALIZADO</b></span>
-            <button class="btn-small blue-grey lighten-3 black-text"
-              onclick="verDetalleExamen('${al.dni}')">
-              <i class="material-icons left" style="font-size:1rem;">visibility</i> Ver Examen
-            </button>
-          </div>`;
-
-      } else if (al.nota === "HABILITADO") {
-
-        celdaAccion = `<span class="blue-text"><b>YA HABILITADO</b></span>`;
-
-      } else if (asistenciaNum >= 99 && al.esExamen) {
-
-        celdaAccion = `
-          <button class="btn-small blue darken-2 pulse"
-            onclick="habilitarExamen('${al.dni}')">
-            HABILITAR AHORA
-          </button>`;
-
-      } else {
-
-        celdaAccion = `<span class="grey-text" style="font-size:0.7rem">No habilitado</span>`;
-      }
-
-      cuerpo.innerHTML += `
-        <tr>
-          <td style="text-align:left;"><b>${al.apellido}, ${al.nombre}</b></td>
-          <td>${al.dni}</td>
-          <td>
-            <div class="progress" style="height: 10px; border-radius: 5px;">
-              <div class="determinate blue darken-2" style="width: ${asistenciaNum}%"></div>
-            </div>
-            <span style="font-size: 0.8em;">${asistenciaNum.toFixed(0)}%</span>
-          </td>
-          <td>
-            <div style="display:flex; align-items:center; gap:10px;">
-              <button class="btn-floating btn-small green"
-                onclick="marcarAsistencia('${al.dni}', true)">
-                <i class="material-icons">add</i>
+          celdaAccion = `
+            <div style="display:flex; flex-direction:column; gap:5px;">
+              <span class="green-text"><b>FINALIZADO</b></span>
+              <button class="btn-small blue-grey lighten-3 black-text"
+                onclick="verDetalleExamen('${al.dni}')">
+                <i class="material-icons left" style="font-size:1rem;">visibility</i> Ver Examen
               </button>
+            </div>`;
 
-              <button class="btn-floating btn-small red"
-                onclick="confirmarQuitarAsistencia('${al.dni}')">
-                <i class="material-icons">remove</i>
-              </button>
+        } else if (al.habilitado) {
 
-              <div style="margin-left:10px;">${celdaAccion}</div>
-            </div>
-          </td>
-        </tr>`;
-    });
+          celdaAccion = `<span class="blue-text"><b>YA HABILITADO</b></span>`;
 
-    document.getElementById('contenedorTabla').style.display = 'block';
+        } else if (asistenciaNum >= 99 && al.tipoDia === "EXAMEN") {
 
-  }).obtenerAlumnosPorFiltro(sede);
-}
+          celdaAccion = `
+            <button class="btn-small blue darken-2 pulse"
+              onclick="habilitarExamen('${al.dni}')">
+              HABILITAR AHORA
+            </button>`;
+
+        } else {
+
+          celdaAccion = `<span class="grey-text" style="font-size:0.7rem">No habilitado</span>`;
+        }
+
+        cuerpo.innerHTML += `
+          <tr>
+            <td style="text-align:left;">
+              <b>${al.apellido}, ${al.nombre}</b>
+              <span class="blue-text" style="font-size:0.8rem;">
+                ${al.tipoDia}
+              </span>
+            </td>
+            <td>${al.dni}</td>
+            <td>
+              <div class="progress" style="height: 10px; border-radius: 5px;">
+                <div class="determinate blue darken-2" style="width: ${asistenciaNum}%"></div>
+              </div>
+              <span style="font-size: 0.8em;">${asistenciaNum.toFixed(0)}%</span>
+            </td>
+            <td>
+              <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+
+                ${(al.tipoDia === "CURSADA1" || al.tipoDia === "CURSADA2") ? `
+                  <button class="btn-floating btn-small green"
+                    onclick="marcarAsistencia('${al.dni}', true)">
+                    <i class="material-icons">add</i>
+                  </button>
+
+                  <button class="btn-floating btn-small red"
+                    onclick="confirmarQuitarAsistencia('${al.dni}')">
+                    <i class="material-icons">remove</i>
+                  </button>
+                ` : `
+                  <span class="grey-text" style="font-size:0.8rem;">
+                    🔒 Solo asistencia en día de cursada
+                  </span>
+                `}
+
+                <div style="margin-left:10px;">${celdaAccion}</div>
+
+              </div>
+            </td>
+          </tr>`;
+      });
+
+      document.getElementById('contenedorTabla').style.display = 'block';
+      console.log("👉 SELECT VALUE:", document.getElementById('filtroSede').value);
+
+    }).obtenerAlumnosPorFiltro(sede);
+  }
 
   // --- FUNCIÓN PARA VER DETALLE (Instructor) ---
   function verDetalleExamen(dni) {
@@ -209,54 +248,55 @@ function cargarListado() {
   }
 
 function marcarAsistencia(dni, esSuma) {
+
   google.script.run
     .withSuccessHandler(res => {
-      if(res.success) {
-        M.toast({html: 'Asistencia actualizada', classes: 'rounded green'});
-        cargarListado(); // Refresca para actualizar la barra de progreso
+
+      if (res.success) {
+        M.toast({html: 'Asistencia actualizada', classes: 'green'});
+        cargarListado();
       } else {
         Swal.fire('Error', res.message, 'error');
       }
+
     })
-    .marcarAsistencia(dni, esSuma, DNI_INSTRUCTOR); // <-- Pasamos el DNI del instructor para el LOG
+    .marcarAsistencia(dni, esSuma, DNI_INSTRUCTOR);
 }
 
-// Función que pide el botón de "remover" asistencia
 function confirmarQuitarAsistencia(dni) {
   Swal.fire({
     title: '¿Quitar asistencia?',
-    text: "Se restará un presente al alumno.",
+    text: "Esta acción reducirá el porcentaje del alumno",
     icon: 'warning',
     showCancelButton: true,
     confirmButtonText: 'Sí, quitar',
-    cancelButtonText: 'Cancelar'
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#d32f2f'
   }).then((result) => {
     if (result.isConfirmed) {
       marcarAsistencia(dni, false);
     }
   });
 }
-  
+
 function habilitarExamen(dni) {
-  Swal.fire({
-    title: '¿Confirmar habilitación?',
-    text: "Esta acción permitirá que el alumno rinda el examen.",
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonText: 'Sí, habilitar'
-  }).then((result) => {
-    if (result.isConfirmed) {
-      google.script.run
-        .withSuccessHandler(res => {
-          if(res.success) {
-            Swal.fire('Éxito', res.message, 'success');
-            cargarListado();
-          }
-        })
-        .habilitarExamen(dni, DNI_INSTRUCTOR); // <-- Pasamos el DNI del instructor
-    }
-  });
+
+  google.script.run
+    .withSuccessHandler(res => {
+
+      if (res.success) {
+        Swal.fire('OK', res.message, 'success');
+        cargarListado();
+      } else {
+        Swal.fire('Error', res.message, 'error');
+      }
+
+    })
+    .habilitarExamen(dni, DNI_INSTRUCTOR);
 }
+
+
+
 </script>
 </body>
 

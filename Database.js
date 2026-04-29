@@ -78,6 +78,25 @@ function registrarAccion(dniOp, accion, detalle = "") {
   } catch (e) { console.error("Error Log: " + e.message); }
 }
 
+function registrarAsistenciaLog(dniAlumno, tipo, detalle, dniOperador) {
+  try {
+
+    const sheet = getSheet(SHEETS.ASISTENCIA);
+
+    sheet.appendRow([
+      new Date(),
+      dniAlumno,
+      tipo,        // CURSADA1 / CURSADA2 / EXAMEN
+      detalle,     // PRESENTE / AUSENTE / HABILITADO
+      dniOperador
+    ]);
+
+  } catch (e) {
+    console.error("Error en registrarAsistenciaLog:", e);
+  }
+}
+
+
 function obtenerLogs() {
   try {
     const data = getSheet(SHEETS.LOGS).getDataRange().getValues();
@@ -174,72 +193,19 @@ function obtenerDatosEdicionCompleta(dni) {
   }
 }
 
-function registrarAsistenciaFila(dniAlumno, presente, dniOperador) {
-  try {
-
-    const sheet = getSheet(SHEETS.INSCRIPCIONES);
-    const data = sheet.getDataRange().getValues();
-    const dAlu = dniAlumno.toString().replace(/\D/g, "");
-
-    for (let i = 1; i < data.length; i++) {
-
-      if (!data[i][COL_INS.DNI]) continue;
-
-      if (data[i][COL_INS.DNI].toString().replace(/\D/g, "") === dAlu) {
-
-        let actual = parseFloat(data[i][COL_INS.ASISTENCIA]) || 0;
-
-        const incremento = 100 / (typeof TOTAL_CLASES !== 'undefined' ? TOTAL_CLASES : 2);
-
-        let nuevo = presente
-          ? Math.min(100, actual + incremento)
-          : Math.max(0, actual - incremento);
-
-        sheet.getRange(i + 1, COL_INS.ASISTENCIA + 1).setValue(nuevo);
-
-        registrarAccion(
-          dniOperador,
-          presente ? "PRESENTE" : "QUITÓ ASISTENCIA",
-          `DNI Alumno: ${dAlu}`
-        );
-
-        if (presente) {
-          getSheet(SHEETS.ASISTENCIA).appendRow([new Date(), dAlu, dniOperador]);
-        }
-
-        return { success: true, nuevoValor: nuevo };
-      }
-    }
-
-    return { success: false, message: "Alumno no encontrado" };
-
-  } catch (error) {
-
-    logError("registrarAsistenciaFila", error, {
-      dniAlumno,
-      presente,
-      dniOperador
-    });
-
-    return {
-      success: false,
-      message: "Error interno del servidor"
-    };
-  }
-}
-
 function obtenerAlumnosPorFiltro(sede) {
 
   const sheet = getSheet(SHEETS.INSCRIPCIONES);
   const data = sheet.getDataRange().getValues();
 
   const sedeFiltro = (sede || "").toString().trim().toLowerCase();
-
-  // 📅 HOY
   const hoy = normalizarFecha(new Date());
 
+  Logger.log("👉 SEDE FILTRO: " + sedeFiltro);
+  Logger.log("👉 HOY NORMALIZADO: " + hoy);
+
   const alumnos = data.slice(1)
-    .filter(r => {
+    .map((r, i) => {
 
       const sedeFila = (r[COL_INS.INSTITUCION] || "")
         .toString()
@@ -250,31 +216,34 @@ function obtenerAlumnosPorFiltro(sede) {
       const f2 = normalizarFecha(r[COL_INS.CURSADA2]);
       const fEx = normalizarFecha(r[COL_INS.FECHA_EXAMEN]);
 
-      // 🎯 coincide si HOY es cualquiera de las 3 fechas
-      const coincideFecha = (hoy === f1 || hoy === f2 || hoy === fEx);
+      if (sedeFila !== sedeFiltro) return null;
 
-      return sedeFila === sedeFiltro && coincideFecha;
+      let tipoDia = null;
+
+      if (hoy === f1) tipoDia = "CURSADA1";
+      else if (hoy === f2) tipoDia = "CURSADA2";
+      else if (hoy === fEx) tipoDia = "EXAMEN";
+
+      if (!tipoDia) return null;
+
+      return {
+        nombre: r[COL_INS.NOMBRE],
+        apellido: r[COL_INS.APELLIDO],
+        dni: r[COL_INS.DNI],
+        asistencia: r[COL_INS.ASISTENCIA],
+        nota: r[COL_INS.NOTA],
+        estado: r[COL_INS.ESTADO_TRAMITE],
+        habilitado: r[COL_INS.ESTADO_TRAMITE] === "HABILITADO",
+        finalizado: r[COL_INS.ESTADO_TRAMITE] === "FINALIZADO",
+        tipoDia: tipoDia
+      };
 
     })
-    .map(r => ({
+    .filter(a => a !== null);
 
-      nombre: r[COL_INS.NOMBRE],
-      apellido: r[COL_INS.APELLIDO],
-      dni: r[COL_INS.DNI],
-      asistencia: r[COL_INS.ASISTENCIA],
-      nota: r[COL_INS.NOTA],
+  Logger.log("👉 TOTAL ALUMNOS ENCONTRADOS: " + alumnos.length);
 
-      finalizado: r[COL_INS.ESTADO_TRAMITE] === "FINALIZADO",
-
-      // 👇 info útil para UI
-      esExamen: hoy === normalizarFecha(r[COL_INS.FECHA_EXAMEN])
-
-    }));
-
-  return {
-    alumnos: alumnos,
-    fechaHoy: hoy
-  };
+  return { alumnos };
 }
 
 // --- 3. PROCESO DE INSCRIPCIÓN ---
@@ -427,16 +396,17 @@ function cancelarInscripcion(dni, dniOperador = "SISTEMA/AUTO") {
 }
 
 // --- 4. EXAMEN Y NOTAS ---
-
 function obtenerSedesUnicas() {
   try {
-    const sheet = getSheet(SHEETS.BARRIOS);
+    const sheet = getSheet(SHEETS.INSCRIPCIONES);
     const data = sheet.getDataRange().getValues();
-    // Quitamos el encabezado y extraemos la columna de Institución (índice 1)
-    const sedes = data.slice(1).map(fila => fila[COL_BAR.BARRIO]);
-    
-    // Filtramos para que no haya repetidos y quitamos vacíos
-    return [...new Set(sedes)].filter(s => s);
+
+    const sedes = data.slice(1)
+      .map(fila => fila[COL_INS.INSTITUCION])
+      .filter(s => s && s.toString().trim() !== "");
+
+    return [...new Set(sedes)];
+
   } catch (e) {
     console.error("Error en obtenerSedesUnicas: " + e.toString());
     return [];
@@ -572,34 +542,100 @@ function sincronizarExamenConInscriptos() {
 
 function marcarAsistencia(dniAlumno, esSuma, dniOperador) {
   try {
+
     const sheet = getSheet(SHEETS.INSCRIPCIONES);
+    const historial = getSheet(SHEETS.ASISTENCIA);
+
     const data = sheet.getDataRange().getValues();
+    const histData = historial.getDataRange().getValues();
+
     const dAlu = dniAlumno.toString().replace(/\D/g, "");
+    const hoy = normalizarFecha(new Date());
 
     for (let i = 1; i < data.length; i++) {
+
+      if (!data[i][COL_INS.DNI]) continue;
+
       if (data[i][COL_INS.DNI].toString().replace(/\D/g, "") === dAlu) {
-        let actual = parseFloat(data[i][COL_INS.ASISTENCIA]) || 0;
-        
-        // Lógica de incremento (50% por clase para 2 clases totales)
-        const incremento = 50; 
-        let nuevo = esSuma ? Math.min(100, actual + incremento) : Math.max(0, actual - incremento);
-        
-        sheet.getRange(i + 1, COL_INS.ASISTENCIA + 1).setValue(nuevo);
-        
-        // Registro de auditoría
-        registrarAccion(dniOperador, esSuma ? "PRESENTE" : "QUITÓ ASISTENCIA", `DNI Alumno: ${dAlu}`);
-        
-        // Registro en historial específico
-        if (esSuma) {
-          getSheet(SHEETS.ASISTENCIA).appendRow([new Date(), dAlu, dniOperador]);
+
+        const f1 = normalizarFecha(data[i][COL_INS.CURSADA1]);
+        const f2 = normalizarFecha(data[i][COL_INS.CURSADA2]);
+
+        let tipoDia = null;
+
+        if (hoy === f1) tipoDia = "CURSADA1";
+        else if (hoy === f2) tipoDia = "CURSADA2";
+
+        if (!tipoDia) {
+          return { success: false, message: "❌ Hoy no es día de cursada" };
         }
-        
-        return { success: true, nuevoValor: nuevo };
+
+        // 🔍 BUSCAR SI YA EXISTE REGISTRO
+        let filaHist = -1;
+
+        for (let j = 1; j < histData.length; j++) {
+
+          const dniHist = histData[j][COL_ASIS.DNI]?.toString().replace(/\D/g, "");
+          const fechaHist = normalizarFecha(histData[j][COL_ASIS.Fecha]);
+          const tipoHist = histData[j][COL_ASIS.TipoDia];
+
+          if (dniHist === dAlu && fechaHist === hoy && tipoHist === tipoDia) {
+            filaHist = j + 1;
+            break;
+          }
+        }
+
+        const nuevoEstado = esSuma ? "PRESENTE" : "AUSENTE";
+
+        // 🔄 ACTUALIZAR O CREAR
+        if (filaHist !== -1) {
+
+          historial.getRange(filaHist, COL_ASIS.Estado + 1).setValue(nuevoEstado);
+          historial.getRange(filaHist, COL_ASIS.Operador + 1).setValue(dniOperador);
+
+        } else {
+
+          historial.appendRow([
+            new Date(),
+            dAlu,
+            tipoDia,
+            nuevoEstado,
+            dniOperador
+          ]);
+        }
+
+        // 🧮 RECALCULAR ASISTENCIA
+        const nuevosHist = historial.getDataRange().getValues().slice(1);
+
+        const registrosAlumno = nuevosHist.filter(r =>
+          r[COL_ASIS.DNI]?.toString().replace(/\D/g, "") === dAlu
+        );
+
+        const presentes = registrosAlumno.filter(r =>
+          r[COL_ASIS.Estado] === "PRESENTE"
+        ).length;
+
+        const totalClases = 2;
+
+        const porcentaje = (presentes / totalClases) * 100;
+
+        sheet.getRange(i + 1, COL_INS.ASISTENCIA + 1).setValue(porcentaje);
+
+        registrarAsistenciaLog(
+          dAlu,
+          tipoDia,
+          nuevoEstado,
+          dniOperador
+        );
+
+        return { success: true, nuevoValor: porcentaje };
       }
     }
+
     return { success: false, message: "Alumno no encontrado" };
+
   } catch (e) {
-    return { success: false, message: "Error Servidor: " + e.toString() };
+    return { success: false, message: e.toString() };
   }
 }
 

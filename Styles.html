@@ -1,9 +1,6 @@
 <style>
 
-/* =========================
-   VARIABLES GENERALES
-========================= */
-
+/* VARIABLES */
 :root{
   --azul:#1565c0;
   --azul-oscuro:#1a237e;
@@ -17,301 +14,123 @@
   --shadow-strong:0 10px 30px rgba(0,0,0,0.15);
 }
 
-/* =========================
-   BODY
-========================= */
-
+/* BASE */
 body{
   background:var(--gris-bg);
-  font-family: 'Roboto', sans-serif;
+  font-family:'Roboto', sans-serif;
 }
 
-input,
-select,
-textarea{
+input,select,textarea{
   border-radius:8px !important;
 }
 
-/* =========================
-   HEADER
-========================= */
-
-.app-header{
-  background:white;
-  border-bottom:1px solid #e8edf3;
-  padding:12px 25px;
-}
-
-/* =========================
-   HERO
-========================= */
-
+/* HERO */
 .hero{
   text-align:center;
-  margin-bottom:40px;
-  width:100%;
-  cursor:pointer;
+  margin-bottom:30px;
 }
 
 .hero img{
-  max-height:100px;
-  margin-bottom:10px;
+  max-height:90px;
 }
 
-.hero-link{
-  text-decoration:none;
-  color:inherit;
-  display:block;
-}
-
-.hero:hover{
-  opacity:0.9;
-  transition:0.2s;
-}
-
-/* =========================
-   TARJETAS
-========================= */
-
-.card{
-  border-radius:14px;
-  box-shadow:var(--shadow-soft);
-}
-
-.form-container{
+/* CARDS */
+.card-ui,
+.exam-card{
   background:white;
-  padding:30px;
   border-radius:20px;
+  padding:25px;
   box-shadow:var(--shadow-soft);
 }
 
-/* 🔥 NUEVO: CARD UNIFICADA */
-.card-ui{
-  background:white;
-  border-radius:16px;
-  padding:20px;
-  box-shadow:var(--shadow-soft);
-}
-/* =========================
-   TRANSICIONES SUAVES
-========================= */
-
-#txtPregunta{
-  transition: opacity 0.25s ease;
-}
-
-/* =========================
-   BOTONES MÁS MODERNOS
-========================= */
-
-.option-btn{
-  display:block;
-  width:100%;
-  padding:16px;
-  margin-bottom:12px;
-  text-align:left;
-  background:#fff;
-  border:1.5px solid #e0e0e0;
-  border-radius:14px;
-  font-size:1.05rem;
-  transition:all .2s ease;
-}
-
-.option-btn:hover{
-  background:#f5f7fa;
-  border-color:#1a237e;
-  transform:translateY(-1px);
-}
-
-.option-btn:active{
-  transform:scale(0.97);
-  background:#e3f2fd;
-}
-
-/* =========================
-   MOBILE FIRST
-========================= */
-
-@media(max-width:600px){
-
-  .exam-card{
-    padding:20px;
-    border-radius:18px;
-  }
-
-  #txtPregunta{
-    font-size:1.2rem;
-  }
-
-  .option-btn{
-    font-size:1rem;
-    padding:14px;
-  }
-}
-
-/* =========================
-   PROGRESO MÁS VISIBLE
-========================= */
-
-#txtProgreso{
-  font-size:0.9rem;
-  color:#555;
-}
-
-/* =========================
-   TIMER MÁS MODERNO
-========================= */
-
-.timer-fill{
-  background:linear-gradient(90deg,#4caf50,#81c784);
-}
-
-/* =========================
-   BOTONES
-========================= */
-
-.btn,
-.btn-large{
+/* BOTONES */
+.btn,.btn-large{
   border-radius:10px;
-  text-transform:none;
   font-weight:600;
-  letter-spacing:.3px;
 }
 
-/* 🔥 BOTÓN PRINCIPAL */
 .btn-primary{
   background:var(--azul);
 }
-
 .btn-primary:hover{
   background:var(--azul-oscuro);
 }
 
-/* =========================
-   BADGES
-========================= */
-
-.status-badge{
-  padding:5px 12px;
-  border-radius:20px;
-  font-weight:bold;
-  color:white;
-}
-
-.bg-aprobado{ background:var(--verde); }
-.bg-desaprobado{ background:var(--rojo); }
-.bg-pendiente{ background:var(--naranja); }
-
-/* =========================
-   TABLAS
-========================= */
-
-.tabla-alumnos{
+/* OPCIONES */
+.option-btn{
+  width:100%;
+  padding:15px;
+  margin-bottom:10px;
+  border:1px solid #ddd;
+  border-radius:12px;
   background:white;
-  margin-top:20px;
-  border-radius:10px;
-  overflow:hidden;
-  padding:10px;
+  transition:.2s;
 }
 
-/* =========================
-   EXAMEN
-========================= */
-
-.exam-card{
-  background:white;
-  color:#333;
-  border-radius:25px;
-  padding:30px;
-  margin-top:20px;
-  box-shadow:var(--shadow-strong);
+.option-btn:hover{
+  background:#f5f7fa;
+  border-color:var(--azul);
 }
 
-/* 🔥 NUEVO: transición entre preguntas */
-.fade{
-  animation:fadeIn .3s ease;
+.option-btn:active{
+  transform:scale(0.97);
 }
 
-@keyframes fadeIn{
-  from{opacity:0; transform:translateY(5px);}
-  to{opacity:1; transform:translateY(0);}
-}
-
+/* TIMER */
 .timer-bar{
   height:10px;
   background:#eee;
   border-radius:5px;
-  margin:20px 0;
-  overflow:hidden;
+  margin:15px 0;
 }
 
 .timer-fill{
   height:100%;
-  width:100%;
-  transition:width 1s linear;
-  background-color:#4caf50;
+  background:linear-gradient(90deg,#4caf50,#81c784);
 }
 
-.option-btn{
-  display:block;
-  width:100%;
-  padding:15px;
-  margin-bottom:10px;
-  text-align:left;
-  background:#fff;
-  border:2px solid #e0e0e0;
+/* ANIMACIÓN */
+.fade{
+  animation:fadeIn .25s ease;
+}
+
+@keyframes fadeIn{
+  from{opacity:0; transform:translateY(5px);}
+  to{opacity:1;}
+}
+
+/* TABLAS */
+.tabla-alumnos{
+  background:white;
   border-radius:12px;
-  font-size:1.1rem;
-  transition:0.2s;
-  cursor:pointer;
+  padding:10px;
 }
 
-.option-btn:hover{
-  background:#f5f5f5;
-  border-color:var(--azul-oscuro);
+/* MOBILE */
+@media(max-width:768px){
+
+  table thead{ display:none; }
+
+  table tr{
+    display:block;
+    margin-bottom:15px;
+    background:white;
+    padding:10px;
+    border-radius:12px;
+  }
+
+  table td{
+    display:flex;
+    justify-content:space-between;
+    padding:6px;
+  }
+
+  .exam-card{
+    padding:20px;
+  }
 }
 
-.option-btn:active{
-  transform:scale(0.98);
-  background:#e3f2fd;
-}
-
-/* 🔥 NUEVO: feedback respuesta */
-.option-correct{
-  border-color:var(--verde);
-  background:#e8f5e9;
-}
-
-.option-error{
-  border-color:var(--rojo);
-  background:#ffebee;
-}
-
-/* =========================
-   IMÁGENES
-========================= */
-
-img{
-  max-width:100%;
-  height:auto;
-  border-radius:10px;
-}
-
-/* =========================
-   UTILIDADES
-========================= */
-
+/* UTIL */
 .bold{ font-weight:bold; }
-
-.center-flex{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-
-.loader{
-  display:none;
-  margin:20px auto;
-}
 
 </style>

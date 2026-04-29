@@ -172,6 +172,42 @@ function generarCertificadoAlumno(dni, dniOperador) {
   };
 }
 
+
+function normalizarFecha(fecha) {
+  if (!fecha) return "";
+
+  const f = new Date(fecha);
+
+  if (isNaN(f.getTime())) return "";
+
+  return Utilities.formatDate(
+    f,
+    Session.getScriptTimeZone(),
+    "yyyy-MM-dd"
+  );
+}
+
+function limpiarHojaInscripciones() {
+  const sheet = getSheet(SHEETS.INSCRIPCIONES);
+  const data = sheet.getDataRange().getValues();
+
+  const limpia = data.map((r, i) => {
+    if (i === 0) return r;
+
+    return r.map(c =>
+      typeof c === "string"
+        ? c.trim()
+        : c
+    );
+  });
+
+  sheet.getRange(1,1,limpia.length,limpia[0].length).setValues(limpia);
+
+  Logger.log("✅ Hoja INSCRIPCIONES limpiada");
+}
+
+// TESTS DE FUNCIONES CLAVE PARA ASEGURAR INTEGRIDAD Y PERMISOS
+
 function testCertificadoPDF() {
   const dniParaProbar = "12345678"; // <--- CAMBIA POR UN DNI QUE HAYA APROBADO
   
@@ -196,6 +232,25 @@ function testCertificadoPDF() {
 function testFull() {
   console.log("COL_INS:", COL_INS.DNI);
   console.log("COL_PER:", COL_PER.DNI);
+}
+
+function testEnvioMail() {
+  const miEmail = "pollolopeza@gmail.com"; 
+  
+  const datosTest = {
+    nombre: "Pedro Perez",
+    cat: "Clase B1",   // Usamos 'cat' como en tu procesarNuevaInscripcion
+    inst: "Sede Centro", // Usamos 'inst' como en tu procesarNuevaInscripcion
+    dni: "12345678"
+  };
+  
+  const infoTest = {
+    fecha1: new Date(),
+    fecha2: new Date(),
+    fechaExamen: new Date()
+  };
+  
+  enviarMailConfirmacion(miEmail, datosTest, infoTest);
 }
 
 function testGlobals() {
@@ -268,35 +323,6 @@ function testSistemaCompleto() {
   Logger.log("===== FIN TEST =====");
 }
 
-function normalizarFecha(fecha) {
-  if (!fecha) return "";
-
-  const f = new Date(fecha);
-
-  if (isNaN(f.getTime())) return "";
-
-  return Utilities.formatDate(
-    f,
-    Session.getScriptTimeZone(),
-    "yyyy-MM-dd"
-  );
-}
-
-function limpiarHojaInscripciones() {
-  const sheet = getSheet(SHEETS.INSCRIPCIONES);
-  const data = sheet.getDataRange().getValues();
-
-  const limpia = data.map((r, i) => {
-    if (i === 0) return r;
-
-    return r.map(c =>
-      typeof c === "string"
-        ? c.trim()
-        : c
-    );
-  });
-
-  sheet.getRange(1,1,limpia.length,limpia[0].length).setValues(limpia);
-
-  Logger.log("✅ Hoja INSCRIPCIONES limpiada");
+function test() {
+  obtenerAlumnosPorFiltro("Escuela N° 22");
 }

@@ -88,3 +88,11 @@ const COL_RESP = {
   RESPUESTAS: 5,
   TIEMPO: 6
 };
+
+const COL_ASIS = {
+  Fecha: 0,
+  DNI: 1,
+  TipoDia: 2,
+  Estado: 3,
+  Operador: 4
+};

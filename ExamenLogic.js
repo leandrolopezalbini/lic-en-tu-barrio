@@ -192,26 +192,54 @@ function actualizarNotaEnBD(dni, nota, detalle) {
 
 function habilitarExamen(dniAlumno, dniOperador) {
   try {
+
     const sheet = getSheet(SHEETS.INSCRIPCIONES);
     const data = sheet.getDataRange().getValues();
     const dAlu = dniAlumno.toString().replace(/\D/g, "");
+    const hoy = normalizarFecha(new Date());
 
     for (let i = 1; i < data.length; i++) {
-      if (data[i][COL_INS.DNI].toString().replace(/\D/g, "") === dAlu) {
-        
-        // Escribimos HABILITADO en la Columna P (COL_INS.ESTADO_TRAMITE)
-        sheet.getRange(i + 1, COL_INS.ESTADO_TRAMITE + 1).setValue("HABILITADO");
-        
-        // NO LIMPIAMOS COL_INS.NOTA: Así mantenemos el registro de la nota anterior 
-        // hasta que el sistema la sobreescriba al finalizar el nuevo examen.
 
-        registrarAccion(dniOperador, "HABILITÓ EXAMEN", `DNI Alumno: ${dAlu}`);
-        return { success: true, message: "Alumno habilitado correctamente." };
+      const dniFila = data[i][COL_INS.DNI]?.toString().replace(/\D/g, "");
+
+      if (dniFila !== dAlu) continue;
+
+      // 🔒 validar si ya está habilitado (CORRECTO)
+      if (data[i][COL_INS.ESTADO_TRAMITE] === "HABILITADO") {
+        return {
+          success: false,
+          message: "⚠ Ya está habilitado"
+        };
       }
+
+      const fEx = normalizarFecha(data[i][COL_INS.FECHA_EXAMEN]);
+
+      if (hoy !== fEx) {
+        return {
+          success: false,
+          message: "❌ Hoy no es día de examen"
+        };
+      }
+
+      sheet.getRange(i + 1, COL_INS.ESTADO_TRAMITE + 1)
+        .setValue("HABILITADO");
+
+      registrarAsistenciaLog(
+        dAlu,
+        "EXAMEN",
+        "HABILITADO",
+        dniOperador
+      );
+
+      return {
+        success: true,
+        message: "Alumno habilitado correctamente."
+      };
     }
+
     return { success: false, message: "No se encontró el alumno." };
+
   } catch (e) {
-    console.error("Error en habilitarExamen: " + e.toString());
     return { success: false, message: e.toString() };
   }
 }

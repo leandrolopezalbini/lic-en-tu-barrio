@@ -179,21 +179,3 @@ function enviarCorreoResultado(email, nombre, nota, aprobado, excluyente) {
   }
 }
 
-function testEnvioMail() {
-  const miEmail = "pollolopeza@gmail.com"; 
-  
-  const datosTest = {
-    nombre: "Pedro Perez",
-    cat: "Clase B1",   // Usamos 'cat' como en tu procesarNuevaInscripcion
-    inst: "Sede Centro", // Usamos 'inst' como en tu procesarNuevaInscripcion
-    dni: "12345678"
-  };
-  
-  const infoTest = {
-    fecha1: new Date(),
-    fecha2: new Date(),
-    fechaExamen: new Date()
-  };
-  
-  enviarMailConfirmacion(miEmail, datosTest, infoTest);
-}
